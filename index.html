@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reportes Dropi · Descarga mensual</title>
+<style>
+  :root {
+    --naranja: #f47b20;
+    --naranja-osc: #d9670e;
+    --verde: #16a34a;
+    --rojo: #dc2626;
+    --gris-fondo: #f4f5f7;
+    --gris-borde: #e2e4e9;
+    --texto: #23262e;
+    --texto-suave: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--gris-fondo);
+    color: var(--texto);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .contenedor { width: 100%; max-width: 540px; }
+
+  header { text-align: center; margin-bottom: 24px; }
+  header h1 { font-size: 26px; font-weight: 700; }
+  header h1 span { color: var(--naranja); }
+  header p { color: var(--texto-suave); margin-top: 4px; font-size: 14px; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    margin-top: 10px;
+  }
+  .chip.ok { background: #dcfce7; color: var(--verde); }
+  .chip.off { background: #e5e7eb; color: var(--texto-suave); }
+
+  .tarjeta {
+    background: #fff; border: 1px solid var(--gris-borde);
+    border-radius: 14px; padding: 22px; margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .tarjeta h2 { font-size: 16px; margin-bottom: 14px; }
+  .oculto { display: none !important; }
+
+  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+  input[type="email"], input[type="password"], input[type="text"],
+  input[type="date"], input[type="tel"] {
+    width: 100%; padding: 10px 12px; font-size: 15px;
+    border: 1px solid var(--gris-borde); border-radius: 9px;
+    background: #fff; color: var(--texto);
+  }
+  input:focus { outline: 2px solid #fdba74; border-color: var(--naranja); }
+
+  .fila-fechas { display: flex; gap: 12px; }
+  .fila-fechas > div { flex: 1; }
+
+  .tipos-reporte { display: flex; gap: 10px; }
+  .tipos-reporte .tipo {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 2px; padding: 14px 8px; border: 2px solid var(--gris-borde);
+    border-radius: 12px; cursor: pointer; text-align: center;
+    transition: border-color .15s, background .15s;
+  }
+  .tipos-reporte .tipo input { display: none; }
+  .tipos-reporte .tipo .emoji { font-size: 26px; }
+  .tipos-reporte .tipo .titulo { font-weight: 700; font-size: 15px; }
+  .tipos-reporte .tipo .sub { font-size: 12px; color: var(--texto-suave); }
+  .tipos-reporte .tipo.opcion-activa {
+    border-color: var(--naranja); background: #fff7ed;
+  }
+
+  .rapidas { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .rapidas button {
+    border: 1px solid var(--gris-borde); background: #f9fafb; color: var(--texto);
+    font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+  }
+  .rapidas button:hover { border-color: var(--naranja); color: var(--naranja-osc); }
+
+  .principal {
+    width: 100%; margin-top: 18px; padding: 13px; font-size: 16px; font-weight: 700;
+    color: #fff; background: var(--naranja); border: none; border-radius: 10px;
+    cursor: pointer; transition: background .15s;
+  }
+  .principal:hover { background: var(--naranja-osc); }
+  .principal:disabled { background: #f3c79a; cursor: not-allowed; }
+
+  .codigo-2fa {
+    letter-spacing: 10px; font-size: 24px !important; text-align: center;
+    font-weight: 700;
+  }
+  .nota { font-size: 13px; color: var(--texto-suave); margin-top: 8px; line-height: 1.5; }
+
+  #progreso .log {
+    background: #0f172a; color: #e2e8f0; border-radius: 9px;
+    padding: 14px; font-family: ui-monospace, monospace; font-size: 13px;
+    max-height: 220px; overflow-y: auto; line-height: 1.7;
+  }
+  #progreso .log .t { color: #94a3b8; margin-right: 8px; }
+  .puntos::after {
+    content: ""; animation: puntos 1.2s steps(4) infinite;
+  }
+  @keyframes puntos { 0% {content:"";} 25% {content:".";} 50% {content:"..";} 75% {content:"...";} }
+
+  #resultado { text-align: center; }
+  #resultado .icono { font-size: 44px; }
+  #resultado .archivo {
+    font-family: ui-monospace, monospace; font-size: 13px;
+    background: #f1f5f9; border-radius: 8px; padding: 8px; margin: 12px 0;
+    word-break: break-all;
+  }
+  #resultado a.boton {
+    display: inline-block; text-decoration: none; background: var(--verde);
+    color: #fff; font-weight: 700; padding: 12px 26px; border-radius: 10px;
+    font-size: 15px;
+  }
+  #resultado a.boton:hover { background: #15803d; }
+
+  .error-msj {
+    background: #fef2f2; color: var(--rojo); border: 1px solid #fecaca;
+    border-radius: 9px; padding: 10px 12px; font-size: 13.5px;
+    margin-top: 12px; line-height: 1.5;
+  }
+
+  /* ---------------- pestañas ---------------- */
+  .pestanas {
+    display: flex; gap: 6px; margin-bottom: 18px;
+    background: #fff; border: 1px solid var(--gris-borde);
+    border-radius: 12px; padding: 6px;
+  }
+  .pestanas button {
+    flex: 1; padding: 11px 8px; font-size: 15px; font-weight: 700;
+    border: none; background: transparent; color: var(--texto-suave);
+    border-radius: 9px; cursor: pointer;
+  }
+  .pestanas button.activa {
+    background: var(--naranja); color: #fff;
+  }
+
+  /* ---------------- producto ---------------- */
+  .prod-cabecera { display: flex; gap: 16px; align-items: flex-start; }
+  .prod-principal {
+    width: 190px; height: 190px; object-fit: contain; border-radius: 12px;
+    border: 1px solid var(--gris-borde); background: #fff; cursor: zoom-in;
+    flex-shrink: 0;
+  }
+  .prod-id {
+    font-size: 12px; font-weight: 700; color: var(--texto-suave);
+    background: #f1f5f9; display: inline-block; padding: 2px 10px;
+    border-radius: 999px; margin-bottom: 6px;
+  }
+  .prod-datos h2 { font-size: 18px; line-height: 1.3; }
+  .prod-meta { margin-top: 8px; font-size: 14px; color: var(--texto-suave); line-height: 1.7; }
+  .prod-meta b { color: var(--texto); }
+  .prod-thumbs { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .prod-thumbs img {
+    width: 64px; height: 64px; object-fit: contain; border-radius: 8px;
+    border: 2px solid var(--gris-borde); background: #fff; cursor: pointer;
+  }
+  .prod-thumbs img.sel { border-color: var(--naranja); }
+  .thumb-wrap { position: relative; display: inline-block; }
+  .thumb-wrap .borrar {
+    position: absolute; top: -7px; right: -7px; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--rojo); color: #fff; font-size: 12px;
+    line-height: 20px; text-align: center; cursor: pointer; border: 2px solid #fff;
+    user-select: none; font-weight: 700;
+  }
+  .prod-descripcion {
+    font-size: 14px; line-height: 1.6; color: var(--texto);
+    background: #f9fafb; border: 1px solid var(--gris-borde);
+    border-radius: 10px; padding: 14px; overflow-x: auto;
+  }
+  .prod-descripcion img { max-width: 100%; border-radius: 8px; }
+  .prod-descripcion:empty::after {
+    content: "Este producto no tiene descripción."; color: var(--texto-suave);
+  }
+
+  /* guardar + lista de guardados */
+  .guardar {
+    width: 100%; margin-top: 14px; padding: 11px; font-size: 14.5px; font-weight: 700;
+    color: #fff; background: #2563eb; border: none; border-radius: 10px;
+    cursor: pointer;
+  }
+  .guardar:hover { background: #1d4ed8; }
+  .guardar:disabled { background: #93c5fd; cursor: wait; }
+  .guardar.guardado { background: var(--verde); }
+  .contador {
+    font-size: 12px; background: #f1f5f9; color: var(--texto-suave);
+    border-radius: 999px; padding: 2px 10px; vertical-align: middle;
+  }
+  .lista-guardados { display: flex; flex-direction: column; gap: 10px; }
+  .guardado-item {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--gris-borde); border-radius: 11px; padding: 10px;
+    background: #fff;
+  }
+  .guardado-item img {
+    width: 54px; height: 54px; object-fit: contain; border-radius: 8px;
+    border: 1px solid var(--gris-borde); background: #fff; flex-shrink: 0;
+  }
+  .guardado-info { flex: 1; min-width: 0; }
+  .guardado-info .g-nombre {
+    font-weight: 700; font-size: 14px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .guardado-info .g-meta { font-size: 12px; color: var(--texto-suave); margin-top: 2px; }
+  .guardado-acciones { display: flex; gap: 6px; flex-shrink: 0; }
+  .guardado-acciones button {
+    border: 1px solid var(--gris-borde); background: #f9fafb; border-radius: 8px;
+    padding: 7px 11px; font-size: 13px; cursor: pointer;
+  }
+  .guardado-acciones button:hover { border-color: var(--naranja); }
+  .guardado-acciones .peligro:hover { border-color: var(--rojo); color: var(--rojo); }
+
+  /* ---------------- pestaña IA ---------------- */
+  select {
+    width: 100%; padding: 10px 12px; font-size: 15px;
+    border: 1px solid var(--gris-borde); border-radius: 9px;
+    background: #fff; color: var(--texto);
+  }
+  textarea {
+    width: 100%; min-height: 180px; padding: 12px; font-size: 14px;
+    font-family: inherit; line-height: 1.6; color: var(--texto);
+    border: 1px solid var(--gris-borde); border-radius: 10px;
+    background: #fff; resize: vertical;
+  }
+  textarea:focus { outline: 2px solid #fdba74; border-color: var(--naranja); }
+  .ia-texto {
+    white-space: pre-wrap; font-size: 14.5px; line-height: 1.7;
+    background: #f9fafb; border: 1px solid var(--gris-borde);
+    border-radius: 10px; padding: 16px; max-height: 480px; overflow-y: auto;
+  }
+  .copiar {
+    margin-top: 12px; padding: 10px 20px; font-size: 14.5px; font-weight: 700;
+    color: #fff; background: #2563eb; border: none; border-radius: 9px;
+    cursor: pointer;
+  }
+  .copiar:hover { background: #1d4ed8; }
+  .fila-botones { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .fila-botones > * { flex: 0 0 auto; }
+  .fila-botones .principal { flex: 1 1 auto; }
+  .secundario {
+    padding: 10px 16px; font-size: 14px; font-weight: 700;
+    color: var(--texto); background: #fff; border: 1.5px solid var(--gris-borde);
+    border-radius: 9px; cursor: pointer;
+  }
+  .secundario:hover { border-color: var(--naranja); color: var(--naranja-osc); }
+  .chico {
+    padding: 8px 12px; font-size: 13px; border: 1px solid var(--gris-borde);
+    background: #f9fafb; border-radius: 8px; cursor: pointer;
+  }
+  .chico:hover { border-color: var(--naranja); }
+  .chico.peligro:hover { border-color: var(--rojo); }
+  .editar {
+    width: 100%; margin-top: 10px; padding: 9px; font-size: 14px; font-weight: 700;
+    color: var(--texto); background: #fff; border: 1.5px dashed var(--gris-borde);
+    border-radius: 9px; cursor: pointer;
+  }
+  .editar:hover { border-color: var(--naranja); color: var(--naranja-osc); }
+  .casilla-imagen {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px;
+    font-size: 13.5px; color: var(--texto); cursor: pointer;
+    background: #f9fafb; border: 1px dashed var(--gris-borde);
+    border-radius: 9px; padding: 10px 12px;
+  }
+  .casilla-imagen input { width: auto; }
+  .barra-editor {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;
+  }
+  .barra-editor button {
+    border: 1px solid var(--gris-borde); background: #fff; border-radius: 7px;
+    padding: 5px 10px; font-size: 13px; cursor: pointer; color: var(--texto);
+  }
+  .barra-editor button:hover { border-color: var(--naranja); }
+  .editor-desc {
+    min-height: 160px; outline: 2px solid #fdba74; cursor: text;
+  }
+  .editor-desc:empty::before {
+    content: "Escribe aquí el contenido…"; color: var(--texto-suave);
+  }
+  .modulo {
+    border: 1px solid var(--gris-borde); border-radius: 11px;
+    margin-bottom: 8px; background: #fff; overflow: hidden;
+  }
+  .modulo summary {
+    cursor: pointer; padding: 11px 14px; font-weight: 700; font-size: 14.5px;
+    list-style: none; display: flex; align-items: center; gap: 8px;
+    user-select: none;
+  }
+  .modulo summary::-webkit-details-marker { display: none; }
+  .modulo summary::before {
+    content: "▸"; color: var(--naranja); transition: transform .15s;
+    display: inline-block;
+  }
+  .modulo[open] summary::before { transform: rotate(90deg); }
+  .modulo summary .vacio {
+    font-weight: 400; font-size: 12px; color: var(--texto-suave);
+  }
+  .modulo-cuerpo { padding: 0 14px 12px; }
+  .modulo-acciones { display: flex; gap: 6px; margin-bottom: 8px; }
+  .modulo-contenido {
+    font-size: 14px; line-height: 1.6; color: var(--texto);
+    background: #f9fafb; border: 1px solid var(--gris-borde);
+    border-radius: 9px; padding: 12px; max-height: 420px; overflow-y: auto;
+  }
+  .modulo-contenido img { max-width: 100%; border-radius: 8px; }
+  .modulo-contenido:empty::after {
+    content: "(módulo vacío — edítalo para agregar contenido)";
+    color: var(--texto-suave);
+  }
+  .crear-modulo { display: flex; gap: 8px; margin-top: 10px; }
+  .crear-modulo input { flex: 1; }
+  .titulo-editor {
+    font-size: 13px; font-weight: 700; color: var(--naranja-osc);
+    margin-bottom: 6px;
+  }
+  footer { text-align: center; color: var(--texto-suave); font-size: 12px; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="contenedor">
+
+  <header>
+    <h1>📦 Reportes <span>Dropi</span></h1>
+    <p>Pedidos con productos · un producto por fila</p>
+    <span id="chipSesion" class="chip off">Comprobando sesión…</span>
+  </header>
+
+  <nav class="pestanas">
+    <button id="pestanaReportes" class="activa">📊 Reportes</button>
+    <button id="pestanaProductos">🛍️ Productos</button>
+    <button id="pestanaIA">🤖 IA</button>
+  </nav>
+
+  <!-- ================= PESTAÑA REPORTES ================= -->
+  <div id="tabReportes">
+
+  <!-- ============ INICIO DE SESIÓN (solo si hace falta) ============ -->
+  <div id="tarjetaLogin" class="tarjeta oculto">
+    <h2>🔐 Iniciar sesión en Dropi</h2>
+    <div id="pasoCredenciales">
+      <label for="email">Usuario (correo)</label>
+      <input type="email" id="email" autocomplete="username" placeholder="tucorreo@gmail.com">
+      <label for="password">Contraseña</label>
+      <input type="password" id="password" autocomplete="current-password" placeholder="••••••••">
+      <button id="btnLogin" class="principal">Ingresar</button>
+    </div>
+    <div id="paso2fa" class="oculto">
+      <h2 style="margin-bottom:6px">📱 Segundo factor</h2>
+      <p class="nota" style="margin:0 0 8px">
+        Ingresa los <b>6 dígitos</b> que genera tu app de autenticación
+        (el código cambia cada 30 segundos).
+      </p>
+      <label for="otp">Código</label>
+      <input type="tel" id="otp" class="codigo-2fa" maxlength="6"
+             placeholder="······" inputmode="numeric" autocomplete="one-time-code">
+      <button id="btn2fa" class="principal">Validar código</button>
+    </div>
+    <div id="errorLogin" class="error-msj oculto"></div>
+  </div>
+
+  <!-- ============ RANGO DE FECHAS ============ -->
+  <div id="tarjetaReporte" class="tarjeta">
+    <h2>🗓️ ¿Qué reporte quieres descargar?</h2>
+    <div class="tipos-reporte">
+      <label class="tipo opcion-activa" id="tipoPedidos">
+        <input type="radio" name="tipo" value="pedidos" checked>
+        <span class="emoji">📦</span>
+        <span class="titulo">Pedidos</span>
+        <span class="sub">un producto por fila</span>
+      </label>
+      <label class="tipo" id="tipoCartera">
+        <input type="radio" name="tipo" value="cartera">
+        <span class="emoji">💰</span>
+        <span class="titulo">Cartera</span>
+        <span class="sub">historial de movimientos</span>
+      </label>
+    </div>
+
+    <h2 style="margin-top:18px">Rango de fechas</h2>
+    <div class="fila-fechas">
+      <div>
+        <label for="desde">Desde</label>
+        <input type="date" id="desde">
+      </div>
+      <div>
+        <label for="hasta">Hasta</label>
+        <input type="date" id="hasta">
+      </div>
+    </div>
+    <div class="rapidas">
+      <button onclick="mesActual()">Mes actual</button>
+      <button onclick="mesAnterior()">Mes anterior</button>
+      <button onclick="hoy()">Solo hoy</button>
+    </div>
+    <button id="btnDescargar" class="principal" disabled>⬇️ Descargar reporte</button>
+    <p class="nota" id="notaTiempo">Los pedidos se generan en cola en Dropi
+      (normalmente tarda menos de un minuto); la cartera baja directo.
+      No cierres esta página mientras se genera.</p>
+    <div id="errorReporte" class="error-msj oculto"></div>
+  </div>
+
+  <!-- ============ PROGRESO ============ -->
+  <div id="progreso" class="tarjeta oculto">
+    <h2 id="tituloProgreso">Progreso</h2>
+    <div id="log" class="log"></div>
+  </div>
+
+  <!-- ============ RESULTADO ============ -->
+  <div id="resultado" class="tarjeta oculto">
+    <div class="icono">✅</div>
+    <h2 style="margin-top:6px">¡Reporte descargado!</h2>
+    <div id="nombreArchivo" class="archivo"></div>
+    <a id="linkDescarga" class="boton" href="#">💾 Guardar archivo</a>
+    <p class="nota">También quedó guardado en la carpeta <b>reportes/</b> del proyecto.</p>
+  </div>
+  </div><!-- /tabReportes -->
+
+  <!-- ================= PESTAÑA PRODUCTOS ================= -->
+  <div id="tabProductos" class="oculto">
+    <div class="tarjeta">
+      <h2>🔎 Buscar producto por ID</h2>
+      <label for="productoId">ID del producto</label>
+      <input type="tel" id="productoId" inputmode="numeric" placeholder="Ej: 2174929"
+             style="font-size:18px">
+      <button id="btnBuscarProducto" class="principal">Buscar producto</button>
+      <p class="nota">Es el número que ves en la página de productos de Dropi
+        (Catálogo → Product list). Trae las imágenes y la descripción.</p>
+      <div id="errorProducto" class="error-msj oculto"></div>
+    </div>
+
+    <div id="productoResultado" class="tarjeta oculto">
+      <div class="prod-cabecera">
+        <img id="prodImagenPrincipal" class="prod-principal" alt="Imagen del producto">
+        <div class="prod-datos">
+          <div class="prod-id" id="prodId"></div>
+          <h2 id="prodNombre"></h2>
+          <div id="prodMeta" class="prod-meta"></div>
+        </div>
+      </div>
+      <div id="prodThumbs" class="prod-thumbs"></div>
+      <div id="zonaGestionImagenes" class="oculto" style="margin-top:8px">
+        <input type="file" id="archivoImagen" accept="image/*" class="oculto">
+        <button id="btnAgregarImagen" class="chico">➕ Agregar imagen</button>
+        <span class="nota" style="display:inline">…o presiona ✕ sobre una miniatura para eliminarla</span>
+      </div>
+      <button id="btnGuardarProducto" class="guardar">💾 Guardar producto en mi base de datos</button>
+      <h2 style="margin-top:16px">📂 Módulos del producto</h2>
+      <p class="nota" style="margin-top:0">Despliega cada módulo con un clic.
+        Los módulos también se usan como contexto cuando la IA genera.</p>
+      <div id="prodModulos"></div>
+      <div id="zonaCrearModulo" class="crear-modulo oculto">
+        <input type="text" id="nombreModuloNuevo" placeholder="Nombre del módulo (ej: Secuencia, Objeciones…)">
+        <button id="btnCrearModulo" class="chico">➕ Crear módulo</button>
+      </div>
+      <div id="zonaEditarDesc" class="oculto">
+        <div class="titulo-editor" id="tituloEditor">Editando: Descripción</div>
+        <div class="barra-editor">
+          <button type="button" data-cmd="bold" title="Negrita"><b>B</b></button>
+          <button type="button" data-cmd="italic" title="Cursiva"><i>I</i></button>
+          <button type="button" data-cmd="underline" title="Subrayado"><u>U</u></button>
+          <button type="button" data-cmd="insertUnorderedList" title="Lista con viñetas">• Lista</button>
+          <button type="button" data-cmd="insertHTML" data-val="<br>" title="Salto de línea">↵ Salto</button>
+          <button type="button" data-cmd="removeFormat" title="Quitar formato">✕ Quitar formato</button>
+        </div>
+        <div id="editarDesc" class="prod-descripcion editor-desc" contenteditable="true"></div>
+        <div class="fila-botones" style="margin-top:10px">
+          <button id="btnCancelarDesc" class="secundario">Cancelar</button>
+          <button id="btnGuardarDesc" class="principal" style="margin-top:0">💾 Guardar módulo</button>
+        </div>
+      </div>
+      <h2 style="margin-top:16px">💬 Descripciones generadas guardadas <span id="prodDescsCount" class="contador"></span></h2>
+      <div id="prodDescsLista" class="lista-guardados"></div>
+      <p class="nota" id="prodDescsNota" style="display:none">
+        Aún no hay descripciones guardadas para este producto. Genera una en la
+        pestaña 🤖 IA y presión «Guardar en el producto».</p>
+    </div>
+
+    <div id="tarjetaGuardados" class="tarjeta">
+      <h2>📚 Productos guardados <span id="contadorGuardados" class="contador"></span></h2>
+      <div id="listaGuardados" class="lista-guardados"></div>
+      <p class="nota" id="notaGuardados" style="display:none">
+        Aún no has guardado productos. Busca uno por ID y presiona
+        «Guardar producto».</p>
+    </div>
+  </div><!-- /tabProductos -->
+
+  <!-- ================= PESTAÑA IA (Z.ai) ================= -->
+  <div id="tabIA" class="oculto">
+    <div class="tarjeta">
+      <h2>🔑 Conexión con Z.ai (GLM)</h2>
+      <div id="chipIA" class="chip off" style="margin-top:0;margin-bottom:10px">Sin configurar</div>
+      <label for="iaKey">API key de Z.ai</label>
+      <input type="password" id="iaKey" placeholder="Pega tu API key (se guarda solo en tu equipo)">
+      <label for="iaPlan">Plan / tipo de cuenta (Z.ai)</label>
+      <select id="iaPlan">
+        <option value="coding">GLM Coding Plan (Lite · Pro · Max)</option>
+        <option value="normal">API normal (créditos pay-as-you-go)</option>
+      </select>
+      <label for="iaKeyOpenAI">API key de OpenAI — para generar imágenes</label>
+      <input type="password" id="iaKeyOpenAI" placeholder="sk-… (opcional, solo si usarás plantillas de imagen)">
+      <div class="fila-fechas">
+        <div>
+          <label for="iaModelo">Modelo</label>
+          <select id="iaModelo">
+            <option value="glm-4.6">GLM-4.6 · recomendado en Coding</option>
+            <option value="glm-4.5-air">GLM-4.5-Air · incluido en Lite</option>
+            <option value="glm-4.5">GLM-4.5</option>
+            <option value="glm-5.3">GLM-5.3 · el más nuevo</option>
+            <option value="glm-4.5-flash">GLM-4.5-Flash · rápido</option>
+            <option value="glm-4-flash-250414">GLM-4-Flash · gratis</option>
+          </select>
+        </div>
+        <div>
+          <label for="iaPensamiento">Nivel de razonamiento</label>
+          <select id="iaPensamiento">
+            <option value="high">🧠 Alto · más profundo</option>
+            <option value="max">🚀 Máximo · solo GLM-5</option>
+            <option value="low">⚡ Bajo · más rápido</option>
+            <option value="off">🚫 Sin razonamiento · solo GLM-4</option>
+          </select>
+        </div>
+      </div>
+      <p class="nota">En GLM-5 el razonamiento no se puede apagar del todo:
+        «Bajo» y «Sin razonamiento» usan el esfuerzo mínimo. Si un modelo te
+        da error de plan/cuota, prueba otro de la lista: cada plan incluye
+        modelos distintos.</p>
+      <button id="btnGuardarIA" class="principal">Guardar configuración</button>
+      <p class="nota">La clave se guarda en <b>.dropi_config.json</b> en la carpeta
+        del proyecto (está protegida por .gitignore, nunca sube a internet).
+        Consigue tu API key en <b>z.ai</b> → API Keys.</p>
+    </div>
+
+    <div class="tarjeta">
+      <h2>📦 Producto a trabajar</h2>
+      <label for="iaProducto">Producto guardado</label>
+      <select id="iaProducto"></select>
+      <details style="margin-top:12px">
+        <summary style="cursor:pointer;font-size:14px;font-weight:600">
+          Ver descripción original del proveedor</summary>
+        <div id="iaDescOriginal" class="prod-descripcion" style="margin-top:10px"></div>
+      </details>
+      <div id="zonaReferencia" class="oculto">
+        <label for="iaReferencia" style="margin-top:14px">🖼️ Imagen de referencia (opcional)</label>
+        <div style="display:flex;gap:10px;align-items:center">
+          <img id="iaRefPreview" class="oculto" style="width:64px;height:64px;object-fit:contain;border:2px solid var(--naranja);border-radius:8px;background:#fff">
+          <select id="iaReferencia" style="flex:1"></select>
+        </div>
+        <p class="nota">Se envía a OpenAI junto con el prompt para que respete
+          el producto real (usa el endpoint de edición con referencia).</p>
+      </div>
+
+      <h2 style="margin-top:16px">📝 Plantilla de prompt</h2>
+      <div class="fila-fechas">
+        <div style="flex:2">
+          <label for="iaPlantillaSel">Plantillas guardadas</label>
+          <select id="iaPlantillaSel"></select>
+        </div>
+        <div style="flex:0;display:flex;gap:6px;align-items:flex-end">
+          <button id="btnPlantillaNueva" class="chico" title="Empezar una plantilla nueva">➕ Nueva</button>
+          <button id="btnPlantillaEliminar" class="chico peligro" title="Eliminar la plantilla seleccionada">🗑️</button>
+        </div>
+      </div>
+      <label for="iaNombrePlantilla" style="margin-top:10px">Nombre de la plantilla</label>
+      <input type="text" id="iaNombrePlantilla" placeholder="Ej: Descripción para WhatsApp">
+      <label class="casilla-imagen">
+        <input type="checkbox" id="iaEsImagen">
+        🖼️ Esta plantilla genera <b>imágenes</b> (usa OpenAI, se cobra por imagen)
+      </label>
+      <label for="iaPrompt" style="margin-top:10px">Texto del prompt</label>
+      <textarea id="iaPrompt" rows="12"></textarea>
+      <div class="fila-botones">
+        <button id="btnPlantillaGuardar" class="secundario">💾 Guardar plantilla</button>
+        <button id="btnGenerarIA" class="principal" style="margin-top:0">✨ Generar descripción para el chatbot</button>
+      </div>
+      <div id="errorIA" class="error-msj oculto"></div>
+    </div>
+
+    <div id="iaResultado" class="tarjeta oculto">
+      <h2 id="iaTituloResultado">💬 Descripción generada <span id="iaChars" class="contador"></span></h2>
+      <div id="iaTexto" class="ia-texto"></div>
+      <div id="iaZonaImagen" style="text-align:center" class="oculto">
+        <img id="iaImagen" style="max-width:100%;border-radius:12px;border:1px solid var(--gris-borde);cursor:zoom-in">
+        <p class="nota">Se guardó una copia en tu equipo. Con el botón de abajo
+          la agregas a la galería del producto.</p>
+      </div>
+      <div class="fila-botones">
+        <button id="btnCopiarIA" class="copiar" style="margin-top:12px">📋 Copiar texto</button>
+        <button id="btnGuardarTextoIA" class="guardar" style="margin-top:12px">💾 Guardar en el producto</button>
+        <button id="btnGuardarImagenIA" class="guardar oculto" style="margin-top:12px">🖼️ Agregar a la galería del producto</button>
+      </div>
+    </div>
+
+    <div id="iaDescsCard" class="tarjeta oculto">
+      <h2>📚 Descripciones guardadas de este producto <span id="iaDescsCount" class="contador"></span></h2>
+      <div id="iaDescsLista" class="lista-guardados"></div>
+      <p class="nota">Cada descripción guardada se usa también como información
+        adicional cuando vuelvas a generar con la IA.</p>
+    </div>
+  </div><!-- /tabIA -->
+
+  <footer>Usa los endpoints oficiales de Dropi · solo funciona en este equipo</footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let sesionActiva = false;
+
+/* ---------------- fechas por defecto: mes actual ---------------- */
+function iso(d) { return d.toISOString().slice(0, 10); }
+function mesActual() {
+  const hoy = new Date();
+  $("desde").value = iso(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  $("hasta").value = iso(hoy);
+}
+function mesAnterior() {
+  const hoy = new Date();
+  const ini = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+  const fin = new Date(hoy.getFullYear(), hoy.getMonth(), 0);
+  $("desde").value = iso(ini); $("hasta").value = iso(fin);
+}
+function hoy() {
+  const h = iso(new Date());
+  $("desde").value = h; $("hasta").value = h;
+}
+mesActual();
+
+/* ---------------- estado de sesión ---------------- */
+async function cargarEstado() {
+  try {
+    const r = await fetch("/api/estado");
+    const d = await r.json();
+    sesionActiva = !!d.sesion;
+    pintarChip(d);
+  } catch {
+    sesionActiva = false;
+    pintarChip(null);
+  }
+  $("tarjetaLogin").classList.toggle("oculto", sesionActiva);
+  $("btnDescargar").disabled = !sesionActiva;
+}
+function pintarChip(d) {
+  const chip = $("chipSesion");
+  if (sesionActiva) {
+    const min = d && d.minutos_restantes != null ? d.minutos_restantes : null;
+    chip.className = "chip ok";
+    chip.textContent = "✔ Sesión activa" + (min != null ? ` · expira en ~${Math.round(min/60)} h` : "");
+  } else {
+    chip.className = "chip off";
+    chip.textContent = "Sin sesión · ingresa para continuar";
+  }
+}
+
+/* ---------------- login y 2FA ---------------- */
+function errorEn(el, msg) {
+  el.textContent = msg;
+  el.classList.remove("oculto");
+}
+async function login(otp) {
+  $("errorLogin").classList.add("oculto");
+  const cuerpo = {
+    email: $("email").value.trim(),
+    password: $("password").value,
+    otp: otp || null
+  };
+  if (!cuerpo.email || !cuerpo.password) {
+    return errorEn($("errorLogin"), "Escribe tu usuario y contraseña.");
+  }
+  $("btnLogin").disabled = true; $("btn2fa").disabled = true;
+  try {
+    const r = await fetch("/api/login", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(cuerpo)
+    });
+    const d = await r.json();
+    if (d.ok && d.necesita_2fa) {
+      $("pasoCredenciales").classList.add("oculto");
+      $("paso2fa").classList.remove("oculto");
+      $("otp").value = ""; $("otp").focus();
+      return;
+    }
+    if (d.ok) { await cargarEstado(); return; }
+    errorEn($("errorLogin"), d.error || "No se pudo iniciar sesión.");
+  } catch (e) {
+    errorEn($("errorLogin"), "Error de conexión con el servidor local.");
+  } finally {
+    $("btnLogin").disabled = false; $("btn2fa").disabled = false;
+  }
+}
+$("btnLogin").onclick = () => login(null);
+$("btn2fa").onclick = () => {
+  const c = $("otp").value.replace(/\D/g, "");
+  if (c.length !== 6) return errorEn($("errorLogin"), "El código debe tener 6 dígitos.");
+  login(c);
+};
+$("otp").addEventListener("keydown", e => { if (e.key === "Enter") $("btn2fa").click(); });
+$("password").addEventListener("keydown", e => { if (e.key === "Enter") $("btnLogin").click(); });
+
+/* ---------------- tipo de reporte ---------------- */
+document.querySelectorAll(".tipos-reporte .tipo").forEach(el => {
+  el.addEventListener("click", () => {
+    document.querySelectorAll(".tipos-reporte .tipo")
+      .forEach(t => t.classList.remove("opcion-activa"));
+    el.classList.add("opcion-activa");
+    el.querySelector("input").checked = true;
+  });
+});
+function tipoElegido() {
+  return document.querySelector('input[name="tipo"]:checked').value;
+}
+
+/* ---------------- solicitar reporte ---------------- */
+$("btnDescargar").onclick = async () => {
+  $("errorReporte").classList.add("oculto");
+  const desde = $("desde").value, hasta = $("hasta").value;
+  if (!desde || !hasta || desde > hasta) {
+    return errorEn($("errorReporte"), "Revisa el rango: la fecha inicial debe ser menor o igual a la final.");
+  }
+  $("btnDescargar").disabled = true;
+  $("resultado").classList.add("oculto");
+  $("progreso").classList.remove("oculto");
+  $("log").innerHTML = "";
+  agregarLog(`Enviando solicitud de ${tipoElegido() === "cartera" ? "cartera" : "pedidos"} (${desde} → ${hasta})…`);
+
+  try {
+    const r = await fetch("/api/reporte", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({desde, hasta, tipo: tipoElegido()})
+    });
+    const d = await r.json();
+    if (d.ok) { vigilar(d.job); return; }
+    if (d.sesion_expirada) {
+      agregarLog("La sesión expiró. Ingresa de nuevo abajo ⬇");
+      await cargarEstado();
+      errorEn($("errorReporte"), "Tu sesión caducó (dura ~12 h). Ingresa usuario y contraseña de nuevo.");
+      $("tarjetaLogin").scrollIntoView({behavior: "smooth"});
+    } else {
+      errorEn($("errorReporte"), d.error || "No se pudo solicitar el reporte.");
+    }
+  } catch {
+    errorEn($("errorReporte"), "Error de conexión con el servidor local.");
+  } finally {
+    $("btnDescargar").disabled = !sesionActiva;
+  }
+};
+
+async function vigilarJobIA(jobId, btn) {
+  let ultimo = 0;
+  const original = btn.textContent;
+  while (true) {
+    await new Promise(r => setTimeout(r, 3000));
+    let d;
+    try {
+      const r = await fetch("/api/job/" + jobId);
+      d = await r.json();
+    } catch { continue; }
+    if (d.log && d.log.length > ultimo) {
+      ultimo = d.log.length;
+      btn.textContent = d.log[d.log.length - 1].msg.slice(0, 60);
+    }
+    if (d.estado === "listo") return d;
+    if (d.estado === "error") {
+      errorEn($("errorIA"), d.error || "La generación falló.");
+      return null;
+    }
+  }
+}
+
+function agregarLog(msg) {
+  const div = document.createElement("div");
+  const t = new Date().toLocaleTimeString("es-CO", {hour12: false});
+  div.innerHTML = `<span class="t">${t}</span>${msg}`;
+  $("log").appendChild(div);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+async function vigilar(jobId) {
+  let ultimo = 0;
+  while (true) {
+    await new Promise(r => setTimeout(r, 2000));
+    let d;
+    try {
+      const r = await fetch("/api/job/" + jobId);
+      d = await r.json();
+    } catch { continue; }
+    for (; ultimo < d.log.length; ultimo++) agregarLog(d.log[ultimo].msg);
+    $("tituloProgreso").innerHTML = d.estado === "corriendo"
+      ? 'Progreso<span class="puntos"></span>' : "Progreso";
+    if (d.estado === "listo") {
+      $("progreso").classList.add("oculto");
+      $("nombreArchivo").textContent = d.archivo;
+      $("linkDescarga").href = "/reportes/" + encodeURIComponent(d.archivo);
+      $("resultado").classList.remove("oculto");
+      return;
+    }
+    if (d.estado === "error") {
+      $("progreso").classList.add("oculto");
+      errorEn($("errorReporte"), d.error || "El reporte falló.");
+      return;
+    }
+  }
+}
+
+/* ---------------- pestañas ---------------- */
+const PESTANAS = {
+  reportes: { tab: "tabReportes", btn: "pestanaReportes" },
+  productos: { tab: "tabProductos", btn: "pestanaProductos" },
+  ia: { tab: "tabIA", btn: "pestanaIA" },
+};
+function mostrarPestana(cual) {
+  for (const [nombre, ids] of Object.entries(PESTANAS)) {
+    $(ids.tab).classList.toggle("oculto", nombre !== cual);
+    $(ids.btn).classList.toggle("activa", nombre === cual);
+  }
+}
+$("pestanaReportes").onclick = () => mostrarPestana("reportes");
+$("pestanaProductos").onclick = () => { mostrarPestana("productos"); $("productoId").focus(); cargarGuardados(); };
+$("pestanaIA").onclick = () => { mostrarPestana("ia"); cargarIA(); };
+
+/* ---------------- búsqueda de producto ---------------- */
+function limpiarHTML(html) {
+  const div = document.createElement("div");
+  div.innerHTML = html || "";
+  div.querySelectorAll("script, iframe, object, embed, link, style").forEach(el => el.remove());
+  div.querySelectorAll("*").forEach(el => {
+    [...el.attributes].forEach(a => {
+      if (/^on/i.test(a.name) || (a.name === "href" && /^javascript:/i.test(a.value)))
+        el.removeAttribute(a.name);
+    });
+  });
+  return div.innerHTML;
+}
+
+async function buscarProducto() {
+  $("errorProducto").classList.add("oculto");
+  $("productoResultado").classList.add("oculto");
+  const pid = $("productoId").value.replace(/\D/g, "");
+  if (!pid) return errorEn($("errorProducto"), "Escribe el ID numérico del producto.");
+  $("btnBuscarProducto").disabled = true;
+  $("btnBuscarProducto").textContent = "Buscando…";
+  try {
+    const r = await fetch("/api/producto?id=" + encodeURIComponent(pid));
+    const d = await r.json();
+    if (d.ok) { pintarProducto(d); return; }
+    if (d.sesion_expirada) {
+      await cargarEstado();
+      errorEn($("errorProducto"), "Tu sesión caducó. Ingresa usuario y contraseña arriba y vuelve a buscar.");
+      $("tarjetaLogin").scrollIntoView({behavior: "smooth"});
+    } else {
+      errorEn($("errorProducto"), d.error || "No se pudo obtener el producto.");
+    }
+  } catch {
+    errorEn($("errorProducto"), "Error de conexión con el servidor local.");
+  } finally {
+    $("btnBuscarProducto").disabled = false;
+    $("btnBuscarProducto").textContent = "Buscar producto";
+  }
+}
+$("btnBuscarProducto").onclick = buscarProducto;
+$("productoId").addEventListener("keydown", e => { if (e.key === "Enter") buscarProducto(); });
+
+/* ---------------- producto actual + edición de descripción ---------------- */
+let productoActual = null;
+const idsGuardados = new Set();
+
+function pintarProducto(p, mantenerAbierto = null) {
+  productoActual = p;
+  $("prodId").textContent = "ID " + p.id;
+  $("prodNombre").textContent = p.nombre || "(sin nombre)";
+  const meta = [];
+  if (p.precio != null && p.precio !== "") meta.push(`Precio proveedor: <b>$${p.precio}</b>`);
+  if (p.sku) meta.push(`SKU: <b>${p.sku}</b>`);
+  meta.push(`Estado: <b>${p.activo ? "Activo" : "Inactivo"}</b>`);
+  if ((p.categorias || []).length) meta.push(`Categorías: <b>${p.categorias.join(", ")}</b>`);
+  if (p.proveedor) meta.push(`Proveedor: <b>${p.proveedor}</b>`);
+  meta.push(`Imágenes: <b>${(p.fotos || []).length}</b>`);
+  $("prodMeta").innerHTML = meta.join("<br>");
+
+  // fotos: usa la copia local si existe (guardadas en tu equipo)
+  const fotos = (p.fotos || []).map(f => ({url: f.local || f.url, main: f.main}));
+  fotos.sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0));
+  if (fotos.length) {
+    const principal = $("prodImagenPrincipal");
+    principal.src = fotos[0].url;
+    principal.onclick = () => window.open(fotos[0].url, "_blank");
+    const thumbs = $("prodThumbs");
+    thumbs.innerHTML = "";
+    fotos.forEach((f, i) => {
+      const wrap = document.createElement("span");
+      wrap.className = "thumb-wrap";
+      const im = document.createElement("img");
+      im.src = f.url;
+      if (i === 0) im.classList.add("sel");
+      im.onclick = () => {
+        principal.src = f.url;
+        principal.onclick = () => window.open(f.url, "_blank");
+        thumbs.querySelectorAll("img").forEach(t => t.classList.remove("sel"));
+        im.classList.add("sel");
+      };
+      wrap.appendChild(im);
+      if (idsGuardados.has(Number(p.id))) {
+        const x = document.createElement("span");
+        x.className = "borrar";
+        x.title = "Eliminar esta imagen";
+        x.textContent = "✕";
+        x.onclick = async e => {
+          e.stopPropagation();
+          if (!confirm("¿Eliminar esta imagen del producto?")) return;
+          const rr = await fetch("/api/imagen/eliminar", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({producto_id: Number(p.id), ruta: f.url})
+          });
+          const dd = await rr.json();
+          if (dd.ok) {
+            p.fotos = (p.fotos || []).filter(
+              ff => (ff.local || ff.url) !== f.url);
+            await cargarGuardados();
+            await cargarIAProductos();
+            pintarProducto(p);
+          } else {
+            alert("No se pudo eliminar: " + (dd.error || "error"));
+          }
+        };
+        wrap.appendChild(x);
+      }
+      thumbs.appendChild(wrap);
+    });
+  }
+  // gestión de imágenes solo para productos guardados
+  $("zonaGestionImagenes").classList.toggle(
+    "oculto", !idsGuardados.has(Number(p.id)));
+  pintarModulos(p);
+  if (mantenerAbierto) {
+    const dets = document.querySelectorAll("#prodModulos details.modulo");
+    dets.forEach(d => { d.open = true; });  // tras editar, mostrar el cambio
+  }
+  $("productoResultado").classList.remove("oculto");
+  cancelarEdicionDesc();
+  cargarDescsProducto(p.id);
+
+  // botón guardar
+  const btn = $("btnGuardarProducto");
+  btn.classList.remove("guardado");
+  btn.disabled = false;
+  btn.textContent = "💾 Guardar producto en mi base de datos";
+  btn.onclick = () => guardarProductoEnBD(p);
+}
+
+/* ---------------- agregar imagen al producto ---------------- */
+$("btnAgregarImagen").onclick = () => $("archivoImagen").click();
+$("archivoImagen").addEventListener("change", async () => {
+  const archivo = $("archivoImagen").files[0];
+  $("archivoImagen").value = "";
+  if (!archivo || !productoActual) return;
+  const data = await new Promise(res => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result);
+    fr.readAsDataURL(archivo);
+  });
+  try {
+    const r = await fetch("/api/imagen/agregar", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({producto_id: Number(productoActual.id),
+                            nombre: archivo.name, data})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      productoActual.fotos = productoActual.fotos || [];
+      productoActual.fotos.push({url: d.ruta, local: d.ruta, main: false});
+      await cargarGuardados();
+      await cargarIAProductos();
+      pintarProducto(productoActual);
+    } else {
+      alert("No se pudo agregar: " + (d.error || "error"));
+    }
+  } catch {
+    alert("Error de conexión al subir la imagen.");
+  }
+});
+
+function htmlATexto(html) {
+  const div = document.createElement("div");
+  div.innerHTML = limpiarHTML(html || "");
+  div.querySelectorAll("br").forEach(b => b.replaceWith("\n"));
+  div.querySelectorAll("p,div,li,h1,h2,h3,h4,summary")
+    .forEach(b => b.append("\n"));
+  return div.textContent.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+async function copiarTexto(texto, btn) {
+  try {
+    await navigator.clipboard.writeText(texto);
+  } catch {
+    // respaldo para navegadores sin permiso de portapapeles
+    const ta = document.createElement("textarea");
+    ta.value = texto;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    ta.remove();
+  }
+  if (btn) {
+    const original = btn.textContent;
+    btn.textContent = "✔ Copiado";
+    setTimeout(() => btn.textContent = original, 1500);
+  }
+}
+
+/* ---------------- módulos del producto ---------------- */
+let moduloEditando = null; // {tipo:"descripcion"} | {tipo:"modulo", id, nombre}
+
+function cancelarEdicionDesc() {
+  $("zonaEditarDesc").classList.add("oculto");
+  moduloEditando = null;
+}
+
+function abrirEditorModulo(info, contenido) {
+  if (info.tipo !== "descripcion" &&
+      !idsGuardados.has(Number(productoActual.id))) {
+    return alert("Primero guarda el producto para poder editar sus módulos.");
+  }
+  moduloEditando = info;
+  $("tituloEditor").textContent = "Editando: " + info.nombre;
+  $("editarDesc").innerHTML = limpiarHTML(contenido || "");
+  $("zonaEditarDesc").classList.remove("oculto");
+  $("zonaEditarDesc").scrollIntoView({behavior: "smooth", block: "center"});
+  $("editarDesc").focus();
+}
+
+function pintarModulos(p) {
+  const cont = $("prodModulos");
+  cont.innerHTML = "";
+  // módulo fijo: Descripción
+  cont.appendChild(crearModulo(
+    {tipo: "descripcion", nombre: "📝 Descripción",
+     contenido: p.descripcion || "", fijo: true}, p));
+  // módulos propios del producto
+  (p.modulos || []).forEach(m =>
+    cont.appendChild(crearModulo(
+      {tipo: "modulo", id: m.id, nombre: "📋 " + m.nombre,
+       contenido: m.contenido}, p)));
+  // crear módulos solo en productos guardados
+  $("zonaCrearModulo").classList.toggle(
+    "oculto", !idsGuardados.has(Number(p.id)));
+}
+
+function crearModulo(info, p) {
+  const det = document.createElement("details");
+  det.className = "modulo";
+  const sum = document.createElement("summary");
+  sum.textContent = info.nombre;
+  if (!info.contenido || !info.contenido.trim()) {
+    const vacio = document.createElement("span");
+    vacio.className = "vacio";
+    vacio.textContent = "(vacío)";
+    sum.appendChild(vacio);
+  }
+  const cuerpo = document.createElement("div");
+  cuerpo.className = "modulo-cuerpo";
+  const acciones = document.createElement("div");
+  acciones.className = "modulo-acciones";
+  const btnCopiar = document.createElement("button");
+  btnCopiar.className = "chico";
+  btnCopiar.textContent = "📋 Copiar";
+  btnCopiar.title = "Copia el contenido como texto listo para pegar";
+  btnCopiar.onclick = e => {
+    e.preventDefault();
+    copiarTexto(htmlATexto(info.contenido), btnCopiar);
+  };
+  acciones.appendChild(btnCopiar);
+  const btnEdit = document.createElement("button");
+  btnEdit.className = "chico";
+  btnEdit.textContent = "✏️ Editar";
+  btnEdit.onclick = e => {
+    e.preventDefault();
+    abrirEditorModulo(
+      {tipo: info.tipo, id: info.id, nombre: info.nombre.replace(/^[^\s]+\s/, "")},
+      info.contenido);
+  };
+  acciones.appendChild(btnEdit);
+  if (!info.fijo) {
+    const btnDel = document.createElement("button");
+    btnDel.className = "chico peligro";
+    btnDel.textContent = "🗑️ Eliminar módulo";
+    btnDel.onclick = async e => {
+      e.preventDefault();
+      if (!confirm(`¿Eliminar el módulo «${info.nombre.replace(/^[^\s]+\s/, "")}»?`)) return;
+      await fetch("/api/modulo/eliminar", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({id: info.id})
+      });
+      await cargarGuardados();
+      await cargarIAProductos();
+      pintarProducto(productoActual);
+    };
+    acciones.appendChild(btnDel);
+  }
+  const contenido = document.createElement("div");
+  contenido.className = "modulo-contenido";
+  contenido.innerHTML = limpiarHTML(info.contenido || "");
+  cuerpo.appendChild(acciones);
+  cuerpo.appendChild(contenido);
+  det.appendChild(sum);
+  det.appendChild(cuerpo);
+  return det;
+}
+
+$("btnCrearModulo").onclick = async () => {
+  const nombre = $("nombreModuloNuevo").value.trim();
+  if (!nombre) return alert("Escribe un nombre para el módulo.");
+  const r = await fetch("/api/modulo/guardar", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({producto_id: Number(productoActual.id), nombre,
+                          contenido: ""})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    $("nombreModuloNuevo").value = "";
+    await cargarGuardados();
+    await cargarIAProductos();
+    pintarProducto(productoActual);
+  } else {
+    alert("No se pudo crear: " + (d.error || "error"));
+  }
+};
+$("nombreModuloNuevo").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("btnCrearModulo").click();
+});
+
+$("btnCancelarDesc").onclick = cancelarEdicionDesc;
+
+// botonera del editor visual
+document.querySelectorAll(".barra-editor button").forEach(b => {
+  b.addEventListener("mousedown", e => e.preventDefault()); // no perder la selección
+  b.addEventListener("click", () => {
+    document.execCommand(b.dataset.cmd, false, b.dataset.val || null);
+    $("editarDesc").focus();
+  });
+});
+
+// Enter = salto de línea (<br>); dentro de listas deja el comportamiento normal
+$("editarDesc").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const enLista = window.getSelection().anchorNode &&
+    (window.getSelection().anchorNode.closest &&
+     window.getSelection().anchorNode.closest("ul,ol"));
+  if (!enLista) {
+    e.preventDefault();
+    document.execCommand("insertLineBreak");
+  }
+});
+
+// pegar como texto plano limpio (sin estilos raros de otras webs)
+$("editarDesc").addEventListener("paste", e => {
+  e.preventDefault();
+  const texto = (e.clipboardData || window.clipboardData).getData("text/plain");
+  document.execCommand("insertText", false, texto);
+});
+
+$("btnGuardarDesc").onclick = async () => {
+  if (!moduloEditando || !productoActual) return;
+  const btn = $("btnGuardarDesc");
+  btn.disabled = true;
+  try {
+    const nuevoHTML = limpiarHTML($("editarDesc").innerHTML);
+    let url, cuerpo;
+    if (moduloEditando.tipo === "descripcion") {
+      url = "/api/producto/editar";
+      cuerpo = {id: Number(productoActual.id), descripcion: nuevoHTML};
+    } else {
+      url = "/api/modulo/guardar";
+      cuerpo = {id: moduloEditando.id,
+                producto_id: Number(productoActual.id),
+                nombre: moduloEditando.nombre, contenido: nuevoHTML};
+    }
+    const r = await fetch(url, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(cuerpo)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      cancelarEdicionDesc();
+      await cargarGuardados();
+      await cargarIAProductos();
+      // repintar conservando el módulo abierto
+      pintarProducto(productoActual, moduloEditando);
+    } else {
+      alert("No se pudo guardar: " + (d.error || "error"));
+    }
+  } catch {
+    alert("Error de conexión al guardar el módulo.");
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+/* ------- descripciones generadas guardadas (ficha del producto) ------- */
+async function cargarDescsProducto(pid) {
+  const cont = $("prodDescsLista");
+  const nota = $("prodDescsNota");
+  try {
+    const r = await fetch("/api/descripciones?producto_id=" + pid);
+    const d = await r.json();
+    const items = d.descripciones || [];
+    $("prodDescsCount").textContent = items.length ? `(${items.length})` : "";
+    nota.style.display = items.length ? "none" : "block";
+    cont.innerHTML = "";
+    items.forEach(des => cont.appendChild(crearItemDesc(des)));
+  } catch {
+    $("prodDescsCount").textContent = "";
+    nota.style.display = "block";
+    cont.innerHTML = "";
+  }
+}
+
+function crearItemDesc(des) {
+  const div = document.createElement("details");
+  div.className = "guardado-item";
+  div.style.display = "block";
+  const resumen = document.createElement("summary");
+  resumen.style.cursor = "pointer";
+  resumen.innerHTML = `<b>${des.creada_en}</b> · ${des.texto.slice(0, 90).replace(/</g, "&lt;")}…`;
+  const cuerpo = document.createElement("div");
+  cuerpo.className = "ia-texto";
+  cuerpo.style.marginTop = "10px";
+  cuerpo.textContent = des.texto;
+  const filaAcciones = document.createElement("div");
+  filaAcciones.style.cssText = "display:flex;gap:6px;margin-top:10px";
+  const btnCopiarDesc = document.createElement("button");
+  btnCopiarDesc.className = "chico";
+  btnCopiarDesc.textContent = "📋 Copiar";
+  btnCopiarDesc.onclick = e => {
+    e.preventDefault();
+    copiarTexto(des.texto, btnCopiarDesc);
+  };
+  filaAcciones.appendChild(btnCopiarDesc);
+  const btnBorrar = document.createElement("button");
+  btnBorrar.className = "chico peligro";
+  btnBorrar.textContent = "🗑️ Eliminar";
+  btnBorrar.style.marginTop = "0";
+  btnBorrar.onclick = async e => {
+    e.preventDefault();
+    if (!confirm("¿Eliminar esta descripción guardada?")) return;
+    await fetch("/api/descripcion/eliminar", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: des.id})
+    });
+    await cargarDescsProducto(des.producto_id);
+    if (!$("iaDescsCard").classList.contains("oculto")) cargarDescsIA();
+  };
+  filaAcciones.appendChild(btnBorrar);
+  div.appendChild(resumen);
+  div.appendChild(cuerpo);
+  div.appendChild(filaAcciones);
+  return div;
+}
+
+/* ---------------- guardar / listado en base de datos ---------------- */
+async function guardarProductoEnBD(p) {
+  const btn = $("btnGuardarProducto");
+  btn.disabled = true;
+  btn.textContent = "Guardando (descargando imágenes)…";
+  try {
+    const r = await fetch("/api/producto/guardar", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(p)
+    });
+    const d = await r.json();
+    if (d.ok) {
+      btn.classList.add("guardado");
+      btn.textContent = "✔ Guardado en productos.sqlite";
+      await cargarGuardados();
+      const rr = await fetch("/api/productos");
+      const dd = await rr.json();
+      const guardado = (dd.productos || []).find(x => Number(x.id) === Number(p.id));
+      if (guardado) { guardado.proveedor = guardado.proveedor || p.proveedor; pintarProducto(guardado); }
+    } else {
+      btn.textContent = "💾 Guardar producto en mi base de datos";
+      btn.disabled = false;
+      alert("No se pudo guardar: " + (d.error || "error desconocido"));
+    }
+  } catch {
+    btn.textContent = "💾 Guardar producto en mi base de datos";
+    btn.disabled = false;
+    alert("Error de conexión al guardar.");
+  }
+}
+
+async function cargarGuardados() {
+  try {
+    const r = await fetch("/api/productos");
+    const d = await r.json();
+    const items = d.productos || [];
+    idsGuardados.clear();
+    items.forEach(p => idsGuardados.add(Number(p.id)));
+    $("contadorGuardados").textContent = items.length ? `(${items.length})` : "";
+    $("notaGuardados").style.display = items.length ? "none" : "block";
+    const cont = $("listaGuardados");
+    cont.innerHTML = "";
+    items.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "guardado-item";
+      const foto = (p.fotos || []).find(f => f.local) || (p.fotos || [])[0] || {};
+      const src = foto.local || foto.url || "";
+      div.innerHTML = `
+        ${src ? `<img src="${src}" alt="">` : ""}
+        <div class="guardado-info">
+          <div class="g-nombre"></div>
+          <div class="g-meta"></div>
+        </div>
+        <div class="guardado-acciones">
+          <button class="ver" title="Ver ficha">👁 Ver</button>
+          <button class="peligro" title="Eliminar de la base">🗑️</button>
+        </div>`;
+      div.querySelector(".g-nombre").textContent = `#${p.id} · ${p.nombre || "(sin nombre)"}`;
+      div.querySelector(".g-meta").textContent =
+        `${p.precio ? "$" + p.precio + " · " : ""}` +
+        `${p.proveedor ? p.proveedor + " · " : ""}` +
+        `guardado ${p.guardado_en} · ${(p.fotos || []).length} fotos`;
+      div.querySelector(".ver").onclick = () => {
+        $("productoId").value = p.id;
+        pintarProducto(p);
+        $("productoResultado").scrollIntoView({behavior: "smooth"});
+      };
+      div.querySelector(".peligro").onclick = async () => {
+        if (!confirm(`¿Eliminar el producto #${p.id} de la base de datos?`)) return;
+        await fetch("/api/producto/eliminar", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({id: p.id})
+        });
+        await cargarGuardados();
+      };
+      cont.appendChild(div);
+    });
+  } catch { /* silencio: la lista se recargará en el próximo cambio de pestaña */ }
+}
+
+/* ---------------- pestaña IA (Z.ai) ---------------- */
+let productosIA = [];
+let plantillasIA = [];
+let plantillaSelId = null;
+
+async function cargarIA() {
+  await Promise.all([cargarIAConfig(), cargarIAProductos(), cargarPlantillas()]);
+}
+
+const ETIQUETAS_NIVEL = {
+  high: "razonamiento alto", max: "razonamiento máximo",
+  low: "razonamiento bajo", off: "sin razonamiento"
+};
+
+async function cargarIAConfig() {
+  try {
+    const r = await fetch("/api/ia/estado");
+    const d = await r.json();
+    const chip = $("chipIA");
+    if (d.configurada) {
+      chip.className = "chip ok";
+      chip.textContent = `✔ Conectada (${d.mascara}) · ${d.modelo} · ` +
+        (ETIQUETAS_NIVEL[d.pensamiento] || d.pensamiento) +
+        (d.plan === "normal" ? " · API normal" : " · Coding Plan");
+    } else {
+      chip.className = "chip off";
+      chip.textContent = "Sin configurar · pega tu API key";
+    }
+    $("iaPlan").value = d.plan || "coding";
+    if (d.openai) {
+      const zona = document.createElement("div");
+      zona.style.cssText = "display:flex;gap:8px;align-items:center;margin:0 0 10px";
+      const nota = document.createElement("span");
+      nota.className = "chip ok";
+      nota.style.margin = "0";
+      nota.textContent = `✔ OpenAI conectada · ${d.modelo_imagen}`;
+      const btnOff = document.createElement("button");
+      btnOff.className = "chico peligro";
+      btnOff.textContent = "Desconectar";
+      btnOff.title = "Borra la key de OpenAI; nada se podrá gastar";
+      btnOff.onclick = async () => {
+        if (!confirm("¿Desconectar OpenAI? Las plantillas de imagen dejarán de funcionar hasta que pegues la key de nuevo.")) return;
+        await fetch("/api/ia/desconectar", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({que: "openai"})
+        });
+        location.reload();
+      };
+      zona.appendChild(nota);
+      zona.appendChild(btnOff);
+      chip.after(zona);
+    }
+    $("iaModelo").value = d.modelo;
+    if (!$("iaModelo").value) $("iaModelo").value = "glm-4.6";
+    $("iaPensamiento").value = d.pensamiento in ETIQUETAS_NIVEL ? d.pensamiento : "high";
+  } catch { /* silencio */ }
+}
+
+/* ---------------- plantillas de prompt ---------------- */
+async function cargarPlantillas(seleccionarId = null) {
+  try {
+    const r = await fetch("/api/plantillas");
+    const d = await r.json();
+    plantillasIA = d.plantillas || [];
+    const sel = $("iaPlantillaSel");
+    const previo = seleccionarId ?? (plantillaSelId ?? (plantillasIA[0] && plantillasIA[0].id));
+    sel.innerHTML = "";
+    if (!plantillasIA.length) {
+      sel.innerHTML = '<option value="">— Sin plantillas —</option>';
+      plantillaSelId = null;
+      if (!$("iaPrompt").value.trim()) $("iaPrompt").value = "";
+      return;
+    }
+    plantillasIA.forEach(pl => {
+      const op = document.createElement("option");
+      op.value = pl.id;
+      op.textContent = pl.nombre;
+      sel.appendChild(op);
+    });
+    const existe = plantillasIA.some(pl => pl.id === previo);
+    const idUsar = existe ? previo : plantillasIA[0].id;
+    sel.value = idUsar;
+    aplicarPlantilla(idUsar);
+  } catch { /* silencio */ }
+}
+
+function aplicarPlantilla(id) {
+  const pl = plantillasIA.find(x => x.id === Number(id));
+  if (!pl) return;
+  plantillaSelId = pl.id;
+  $("iaNombrePlantilla").value = pl.nombre;
+  $("iaPrompt").value = pl.texto;
+  $("iaEsImagen").checked = pl.tipo === "imagen";
+  $("btnGenerarIA").textContent = pl.tipo === "imagen"
+    ? "🎨 Generar imagen del producto"
+    : "✨ Generar descripción para el chatbot";
+  $("zonaReferencia").classList.toggle("oculto", pl.tipo !== "imagen");
+}
+
+$("iaEsImagen").addEventListener("change", () => {
+  $("btnGenerarIA").textContent = $("iaEsImagen").checked
+    ? "🎨 Generar imagen del producto"
+    : "✨ Generar descripción para el chatbot";
+});
+
+$("iaPlantillaSel").addEventListener("change", e => aplicarPlantilla(e.target.value));
+
+$("btnPlantillaNueva").onclick = () => {
+  plantillaSelId = null;
+  $("iaNombrePlantilla").value = "";
+  $("iaPrompt").value = "";
+  $("iaEsImagen").checked = false;
+  $("btnGenerarIA").textContent = "✨ Generar descripción para el chatbot";
+  $("iaNombrePlantilla").focus();
+};
+
+$("btnPlantillaGuardar").onclick = async () => {
+  const nombre = $("iaNombrePlantilla").value.trim();
+  const texto = $("iaPrompt").value.trim();
+  if (!nombre || !texto) return alert("Ponle nombre y texto a la plantilla.");
+  try {
+    const r = await fetch("/api/plantillas/guardar", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: plantillaSelId, nombre, texto,
+                            tipo: $("iaEsImagen").checked ? "imagen" : "texto"})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      await cargarPlantillas(d.id);
+      const btn = $("btnPlantillaGuardar");
+      btn.textContent = "✔ Guardada";
+      setTimeout(() => btn.textContent = "💾 Guardar plantilla", 1500);
+    } else {
+      alert("No se pudo guardar: " + (d.error || "error"));
+    }
+  } catch { alert("Error de conexión al guardar la plantilla."); }
+};
+
+$("btnPlantillaEliminar").onclick = async () => {
+  if (!plantillaSelId) return alert("No hay plantilla seleccionada.");
+  const pl = plantillasIA.find(x => x.id === plantillaSelId);
+  if (!confirm(`¿Eliminar la plantilla «${pl ? pl.nombre : ""}»?`)) return;
+  try {
+    await fetch("/api/plantillas/eliminar", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: plantillaSelId})
+    });
+    plantillaSelId = null;
+    $("iaNombrePlantilla").value = "";
+    $("iaPrompt").value = "";
+    await cargarPlantillas();
+  } catch { alert("Error de conexión al eliminar."); }
+};
+
+async function cargarIAProductos() {
+  try {
+    const r = await fetch("/api/productos");
+    const d = await r.json();
+    productosIA = d.productos || [];
+    const sel = $("iaProducto");
+    const previo = sel.value;
+    sel.innerHTML = "";
+    if (!productosIA.length) {
+      sel.innerHTML = '<option value="">— Primero guarda productos en la pestaña Productos —</option>';
+      return;
+    }
+    productosIA.forEach(p => {
+      const op = document.createElement("option");
+      op.value = p.id;
+      op.textContent = `#${p.id} · ${p.nombre}`;
+      sel.appendChild(op);
+    });
+    if (previo && productosIA.some(p => String(p.id) === previo)) sel.value = previo;
+    sel.dispatchEvent(new Event("change"));
+  } catch { /* silencio */ }
+}
+
+function cargarReferencia() {
+  const p = productosIA.find(x => String(x.id) === $("iaProducto").value);
+  const sel = $("iaReferencia");
+  sel.innerHTML = "";
+  $("iaRefPreview").classList.add("oculto");
+  if (!p || !(p.fotos || []).length) {
+    sel.innerHTML = '<option value="">(este producto no tiene imágenes)</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">Sin referencia (creación libre)</option>';
+  (p.fotos || []).forEach((f, i) => {
+    const op = document.createElement("option");
+    op.value = f.local || f.url;
+    op.textContent = `Imagen ${i + 1}${f.main ? " · principal" : ""}${f.generada ? " · generada" : ""}`;
+    sel.appendChild(op);
+  });
+}
+
+$("iaReferencia").addEventListener("change", () => {
+  const v = $("iaReferencia").value;
+  const prev = $("iaRefPreview");
+  if (v && v.startsWith("/productos_img/")) {
+    prev.src = v;
+    prev.classList.remove("oculto");
+  } else {
+    prev.classList.add("oculto");
+  }
+});
+
+$("iaEsImagen").addEventListener("change", () => {
+  $("zonaReferencia").classList.toggle("oculto", !$("iaEsImagen").checked);
+});
+
+$("iaProducto").addEventListener("change", () => {
+  const p = productosIA.find(x => String(x.id) === $("iaProducto").value);
+  $("iaDescOriginal").innerHTML = p
+    ? (limpiarHTML(p.descripcion) || "<i>Sin descripción del proveedor</i>")
+    : "";
+  cargarDescsIA();
+  cargarReferencia();
+});
+
+/* ------- descripciones guardadas del producto (pestaña IA) ------- */
+async function cargarDescsIA() {
+  const pid = Number($("iaProducto").value);
+  if (!pid) { $("iaDescsCard").classList.add("oculto"); return; }
+  try {
+    const r = await fetch("/api/descripciones?producto_id=" + pid);
+    const d = await r.json();
+    const items = d.descripciones || [];
+    $("iaDescsCount").textContent = items.length ? `(${items.length})` : "(0)";
+    const cont = $("iaDescsLista");
+    cont.innerHTML = "";
+    items.forEach(des => cont.appendChild(crearItemDesc(des)));
+    $("iaDescsCard").classList.remove("oculto");
+  } catch { /* silencio */ }
+}
+
+$("btnGuardarTextoIA").onclick = async () => {
+  const pid = Number($("iaProducto").value);
+  const texto = $("iaTexto").textContent.trim();
+  if (!pid) return alert("Elige un producto guardado.");
+  if (!texto) return alert("No hay texto generado para guardar.");
+  const btn = $("btnGuardarTextoIA");
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/descripcion/guardar", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({producto_id: pid, texto})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      btn.textContent = "✔ Guardada en el producto";
+      setTimeout(() => btn.textContent = "💾 Guardar en el producto", 1800);
+      await cargarDescsIA();
+    } else {
+      alert("No se pudo guardar: " + (d.error || "error"));
+    }
+  } catch {
+    alert("Error de conexión al guardar la descripción.");
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+$("btnGuardarIA").onclick = async () => {
+  const key = $("iaKey").value.trim();
+  const keyOpenAI = $("iaKeyOpenAI").value.trim();
+  const modelo = $("iaModelo").value;
+  const pensamiento = $("iaPensamiento").value;
+  try {
+    const r = await fetch("/api/ia/config", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({key, key_openai: keyOpenAI, modelo, pensamiento,
+                            plan: $("iaPlan").value})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      $("iaKey").value = "";
+      $("iaKeyOpenAI").value = "";
+      location.reload();  // recarga limpia los chips de estado
+    } else {
+      alert("No se pudo guardar: " + (d.error || "error"));
+    }
+  } catch { alert("Error de conexión al guardar la configuración."); }
+};
+
+$("btnGenerarIA").onclick = async () => {
+  $("errorIA").classList.add("oculto");
+  $("iaResultado").classList.add("oculto");
+  const pid = $("iaProducto").value;
+  const prompt = $("iaPrompt").value.trim();
+  if (!pid) return errorEn($("errorIA"), "Elige un producto guardado (o guarda uno primero en la pestaña Productos).");
+  if (!prompt) return errorEn($("errorIA"), "Escribe la plantilla de prompt.");
+  const esImagen = $("iaEsImagen").checked;
+  const btn = $("btnGenerarIA");
+  btn.disabled = true;
+  btn.textContent = esImagen
+    ? "Generando imagen… (puede tardar 1-2 minutos)"
+    : "Generando… (puede tardar hasta 2 minutos)";
+  try {
+    const r = await fetch("/api/ia/generar", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        id: parseInt(pid, 10), prompt,
+        modelo: $("iaModelo").value,
+        pensamiento: $("iaPensamiento").value,
+        plan: $("iaPlan").value,
+        tipo: esImagen ? "imagen" : "texto",
+        referencia: esImagen ? $("iaReferencia").value : ""
+      })
+    });
+    const d = await r.json();
+    if (d.ok && d.job) {
+      // la imagen se genera en segundo plano: vigilar el trabajo
+      const resultado = await vigilarJobIA(d.job, btn);
+      if (!resultado) return;   // error ya mostrado
+      $("iaTituloResultado").innerHTML = "🎨 Imagen generada";
+      $("iaTexto").classList.add("oculto");
+      $("btnCopiarIA").classList.add("oculto");
+      $("btnGuardarTextoIA").classList.add("oculto");
+      $("iaZonaImagen").classList.remove("oculto");
+      $("iaImagen").src = resultado.imagen;
+      $("iaImagen").onclick = () => window.open(resultado.imagen, "_blank");
+      $("btnGuardarImagenIA").classList.remove("oculto");
+      $("btnGuardarImagenIA").textContent = "🖼️ Agregar a la galería del producto";
+      $("btnGuardarImagenIA").onclick = async () => {
+        const rr = await fetch("/api/imagen/producto", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({producto_id: parseInt($("iaProducto").value, 10),
+                                ruta: resultado.imagen})
+        });
+        const dd = await rr.json();
+        if (dd.ok) {
+          $("btnGuardarImagenIA").textContent = "✔ Agregada a la galería";
+          await cargarIAProductos();
+          cargarReferencia();
+        } else { alert("No se pudo agregar: " + (dd.error || "error")); }
+      };
+      $("iaChars").textContent = "";
+      $("iaResultado").classList.remove("oculto");
+      $("iaResultado").scrollIntoView({behavior: "smooth", block: "start"});
+      return;
+    }
+    if (d.ok && d.imagen) {
+      // ----- resultado imagen -----
+      $("iaTituloResultado").innerHTML = "🎨 Imagen generada";
+      $("iaTexto").classList.add("oculto");
+      $("btnCopiarIA").classList.add("oculto");
+      $("btnGuardarTextoIA").classList.add("oculto");
+      $("iaZonaImagen").classList.remove("oculto");
+      $("iaImagen").src = d.imagen;
+      $("iaImagen").onclick = () => window.open(d.imagen, "_blank");
+      $("btnGuardarImagenIA").classList.remove("oculto");
+      $("btnGuardarImagenIA").onclick = async () => {
+        const rr = await fetch("/api/imagen/producto", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({producto_id: parseInt(pid, 10), ruta: d.imagen})
+        });
+        const dd = await rr.json();
+        if (dd.ok) {
+          $("btnGuardarImagenIA").textContent = "✔ Agregada a la galería";
+          await cargarIAProductos();
+        } else {
+          alert("No se pudo agregar: " + (dd.error || "error"));
+        }
+      };
+      $("iaChars").textContent = "";
+    } else if (d.ok) {
+      // ----- resultado texto -----
+      $("iaTituloResultado").innerHTML =
+        "💬 Descripción generada <span class=\"contador\" id=\"iaChars\"></span>";
+      $("iaZonaImagen").classList.add("oculto");
+      $("btnGuardarImagenIA").classList.add("oculto");
+      $("iaTexto").classList.remove("oculto");
+      $("btnCopiarIA").classList.remove("oculto");
+      $("btnGuardarTextoIA").classList.remove("oculto");
+      $("iaTexto").textContent = d.texto;
+      $("iaChars").textContent = `(${d.texto.length} caracteres)`;
+      await cargarDescsIA();
+    } else {
+      errorEn($("errorIA"), d.error || "La generación falló.");
+      return;
+    }
+    $("iaResultado").classList.remove("oculto");
+    $("iaResultado").scrollIntoView({behavior: "smooth", block: "start"});
+  } catch {
+    errorEn($("errorIA"), "Error de conexión; ¿el servicio sigue corriendo?");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = esImagen
+      ? "🎨 Generar imagen del producto"
+      : "✨ Generar descripción para el chatbot";
+  }
+};
+
+$("btnCopiarIA").onclick = async () => {
+  try {
+    await navigator.clipboard.writeText($("iaTexto").textContent);
+    $("btnCopiarIA").textContent = "✔ Copiado";
+    setTimeout(() => $("btnCopiarIA").textContent = "📋 Copiar texto", 1500);
+  } catch {
+    alert("No pude copiar automáticamente; selecciona el texto manualmente.");
+  }
+};
+
+cargarEstado();
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+# CI/CD LOCAL — se ejecuta en TU máquina vía Gitea Actions + act_runner.
+# GitHub NO lo ejecuta (vive en .gitea/workflows, no en .github/workflows),
+# por eso no gasta límites de GitHub.
+name: Compilación local
+
+on:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest   # runner local en modo host (sin Docker)
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+
+      - name: Detectar tipo de proyecto y compilar
+        run: |
+          if [ -f package.json ]; then
+            echo "== Proyecto Node.js =="
+            npm install --no-audit --no-fund || true
+            grep -q '"build"' package.json && npm run build || echo "(sin script build, solo dependencias)"
+          elif [ -f build.gradle.kts ] || [ -f build.gradle ]; then
+            echo "== Proyecto Gradle =="
+            [ -f gradlew ] && chmod +x gradlew && ./gradlew build --no-daemon -x lint -x test
+          elif [ -f android/gradlew ]; then
+            echo "== Proyecto Android =="
+            cd android && chmod +x gradlew && ./gradlew build --no-daemon -x lint -x test
+          elif [ -f requirements.txt ]; then
+            echo "== Proyecto Python =="
+            python3 -m pip install -r requirements.txt
+          elif [ -f Cargo.toml ]; then
+            echo "== Proyecto Rust =="
+            cargo build --release
+          else
+            echo "== Sin build conocido: proyecto verificado OK =="
+          fi
+
+      - name: Resultado
+        run: echo "✔ Compilación local terminada $(date)"

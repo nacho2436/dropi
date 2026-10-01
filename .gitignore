@@ -1,0 +1,15 @@
+# Sesión y credenciales de Dropi — NUNCA subir a git
+.dropi_sesion.json
+.dropi_config.json
+*.sqlite
+
+# Reportes descargados (opcionales de respaldar)
+reportes/
+.dropi_servicio.pid
+.dropi_servicio.log
+productos.sqlite
+productos_images/
+
+# Python compilado
+__pycache__/
+*.pyc
