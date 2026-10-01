@@ -64,25 +64,23 @@ Opciones: `--puerto 9000` (otro puerto), `--sin-abrir` (no abrir navegador).
 
 ### Abrir la página desde otro equipo de la red
 
-Arranca el servicio con `LAN=1`:
+El servicio arranca **accesible desde toda tu red local por defecto**.
+El menú y el estado muestran la URL para los otros equipos, por ejemplo
+**http://192.168.1.17:8765**: ábrela en el navegador del teléfono o del
+otro PC y listo (la página, los reportes, los productos guardados y la IA
+funcionan igual).
 
 ```bash
-LAN=1 ./dropi.sh          # o:  LAN=1 ./dropi.sh iniciar
-LAN=1 PUERTO=9000 ./dropi.sh
+./dropi.sh                 # arranca accesible en la red (por defecto)
+LAN=0 ./dropi.sh           # restringe el acceso a solo este equipo
+PUERTO=9000 ./dropi.sh     # otro puerto
 ```
 
-El servidor pasa a escuchar en toda tu red local y el menú te muestra la
-URL para los otros equipos, por ejemplo **http://192.168.1.17:8765**:
-ábrela en el navegador del teléfono o del otro PC y listo (la página, los
-reportes, los productos guardados y la IA funcionan igual).
-
-Sin `LAN=1` sigue escuchando solo en `127.0.0.1`, nada expuesto a la red.
-
 > ⚠️ Ojo: quien entre desde otro equipo de la red **usa la sesión de Dropi
-> ya iniciada en el servidor** (el token vive en este equipo). Activa `LAN=1`
-> solo en redes de confianza (tu casa/oficina), y date cuenta de que la
-> base de productos y las claves de IA también quedan accesibles desde
-> esos equipos.
+> ya iniciada en el servidor** (el token vive en este equipo). El modo red
+> es para redes de confianza (tu casa/oficina); usa `LAN=0` si no lo
+> necesitas. La base de productos y las claves de IA también quedan
+> accesibles desde esos equipos.
 
 ## 2. Línea de comandos
 

@@ -10,14 +10,15 @@
 #   ./dropi.sh iniciar | detener | reiniciar | estado
 #
 # El puerto se puede cambiar:  PUERTO=9000 ./dropi.sh
-# Acceso desde otros equipos de la red:  LAN=1 ./dropi.sh
+# El acceso desde otros equipos de la red viene ACTIVADO por defecto.
+# Para restringirlo a solo este equipo:  LAN=0 ./dropi.sh
 
 CARPETA="$(cd "$(dirname "$BASH_SOURCE")" && pwd)"
 SERVIDOR="$CARPETA/servidor_dropi.py"
 PIDFILE="$CARPETA/.dropi_servicio.pid"
 LOG="$CARPETA/.dropi_servicio.log"
 PUERTO="${PUERTO:-8765}"
-LAN="${LAN:-0}"
+LAN="${LAN:-1}"
 URL="http://127.0.0.1:$PUERTO"
 EXTRA=()
 [ "$LAN" = "1" ] && EXTRA+=(--lan)
@@ -191,7 +192,7 @@ case "${1:-}" in
     *)
         echo "Uso: ./dropi.sh [iniciar|detener|reiniciar|estado|abrir]"
         echo "     (sin argumentos abre el menú de selección)"
-        echo "Variables: PUERTO=9000  LAN=1  (LAN=1 abre el acceso desde otros equipos)"
+        echo "Variables: PUERTO=9000 (otro puerto)  LAN=0 (solo este equipo, sin red)"
         exit 1
         ;;
 esac
