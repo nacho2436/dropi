@@ -70,6 +70,26 @@ PLANTILLA_DEFECTO = (
 
 
 # ------------------------------------------------------- config IA (Z.ai) --
+def _stock_dropi(o: dict, user_id):
+    """Replica el cálculo de stock de la página de Dropi (priceFixedService.stockFix).
+
+    visible = suma de bodegas − stock privado de OTROS − tu stock privado
+    """
+    b = sum(float(w.get("stock") or 0)
+            for w in (o.get("warehouse_product") or []))
+    if not b and o.get("warehouse_product") is None:
+        b = float(o.get("stock_simple") or 0)
+    priv = o.get("private_product_inventories") or []
+    mio = sum(float(p["stock"]) for p in priv
+              if p.get("user_id") == user_id)
+    otros = sum(float(p["stock"]) for p in priv
+                if p.get("user_id") != user_id)
+    return {"total": int(b - otros - mio),
+            "total_bodegas": int(b),
+            "privado_tuyo": int(mio),
+            "reservado_otros": int(otros)}
+
+
 def _normalizar_nivel(valor: str) -> str:
     """Unifica niveles viejos (enabled/disabled) y nuevos (high/max/low/off)."""
     v = (valor or "").strip().lower()
@@ -157,6 +177,16 @@ def init_db():
             )
         """)
         con.execute("""
+            CREATE TABLE IF NOT EXISTS productos_proveedores (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                producto_id      INTEGER NOT NULL,
+                producto_id_prov INTEGER NOT NULL,
+                nombre           TEXT,
+                stock_info       TEXT,
+                agregado_en      TEXT
+            )
+        """)
+        con.execute("""
             CREATE TABLE IF NOT EXISTS modulos (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
                 producto_id  INTEGER NOT NULL,
@@ -169,6 +199,7 @@ def init_db():
         # migraciones para bases creadas antes de estas funciones
         for sql in ("ALTER TABLE productos ADD COLUMN proveedor TEXT",
                     "ALTER TABLE productos ADD COLUMN proveedor_id INTEGER",
+                    "ALTER TABLE productos ADD COLUMN stock_info TEXT",
                     "ALTER TABLE plantillas ADD COLUMN tipo TEXT DEFAULT 'texto'"):
             try:
                 con.execute(sql)
@@ -220,6 +251,69 @@ def eliminar_plantilla(pid):
         con.execute("DELETE FROM plantillas WHERE id=?", (pid,))
 
 
+# ----------------------------------------------------- proveedores altos --
+def _info_proveedor_stock(ses, id_prov: int):
+    """Ficha resumida de un producto de otro proveedor: nombre + stock."""
+    st, resp = dropi.http("GET",
+                          f"{dropi.API}/products/productlist/v1/show/",
+                          params=[("id", id_prov)],
+                          token=ses["token"], host=ses.get("pais"))
+    if st != 200 or not isinstance(resp, dict):
+        raise RuntimeError(f"Dropi respondió HTTP {st} para el id {id_prov}.")
+    o = resp.get("objects") or resp
+    if isinstance(o, list):
+        o = o[0] if o else {}
+    if not isinstance(o, dict) or not o.get("id"):
+        raise RuntimeError(f"No existe un producto con el id {id_prov}.")
+    stock = _stock_dropi(o, ses["user_id"])
+    bodegas = []
+    for b in (o.get("warehouse_product") or []):
+        info_b = b.get("warehouse") or {}
+        bodegas.append({"bodega": info_b.get("name") or "",
+                        "ciudad": ((info_b.get("city") or {}).get("name") or ""),
+                        "stock": b.get("stock")})
+    stock["bodegas"] = bodegas
+    stock["consultado_en"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # nombre del proveedor
+    nombre = ""
+    try:
+        st2, r2 = dropi.http("GET", f"{dropi.API}/products/v2/{id_prov}",
+                             token=ses["token"], host=ses.get("pais"))
+        if st2 == 200 and isinstance(r2, dict):
+            o2 = r2.get("objects") or r2
+            if isinstance(o2, list):
+                o2 = o2[0] if o2 else {}
+            uid = (o2 or {}).get("user_id")
+            if uid:
+                st3, r3 = dropi.http("GET", f"{dropi.API}/products/supplier/v1",
+                                     params=[("user_id", uid)],
+                                     token=ses["token"], host=ses.get("pais"))
+                if st3 == 200 and isinstance(r3, dict):
+                    o3 = r3.get("objects") or r3
+                    if isinstance(o3, list):
+                        o3 = o3[0] if o3 else {}
+                    nombre = (o3 or {}).get("store_name") or ""
+    except Exception:
+        pass
+    return nombre, stock
+
+
+def listar_proveedores_alt(producto_id: int):
+    with db() as con:
+        filas = con.execute(
+            "SELECT * FROM productos_proveedores WHERE producto_id=? "
+            "ORDER BY id", (producto_id,)).fetchall()
+    return [{"id": f["id"], "producto_id_prov": f["producto_id_prov"],
+             "nombre": f["nombre"] or "",
+             "stock_info": json.loads(f["stock_info"] or "{}")}
+            for f in filas]
+
+
+def eliminar_proveedor_alt(fid: int):
+    with db() as con:
+        con.execute("DELETE FROM productos_proveedores WHERE id=?", (fid,))
+
+
 # --------------------------------------------------------------- módulos --
 def listar_modulos(producto_id: int):
     with db() as con:
@@ -245,6 +339,13 @@ def guardar_modulo(mid, producto_id, nombre, contenido):
                         "creada_en) VALUES (?,?,?,?)",
                         (producto_id, nombre, contenido,
                          datetime.now().strftime("%Y-%m-%d %H:%M")))
+
+
+def reordenar_modulos(ids):
+    """Guarda el orden nuevo de los módulos de un producto."""
+    with db() as con:
+        for idx, mid in enumerate(ids):
+            con.execute("UPDATE modulos SET orden=? WHERE id=?", (idx, int(mid)))
 
 
 def eliminar_modulo(mid):
@@ -315,21 +416,24 @@ def guardar_producto(p: dict):
         con.execute("""
             INSERT INTO productos
                 (id, nombre, descripcion, sku, precio, activo, categorias,
-                 fotos, guardado_en, actualizado_en, proveedor, proveedor_id)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                 fotos, guardado_en, actualizado_en, proveedor, proveedor_id,
+                 stock_info)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET
                 nombre=excluded.nombre, descripcion=excluded.descripcion,
                 sku=excluded.sku, precio=excluded.precio, activo=excluded.activo,
                 categorias=excluded.categorias, fotos=excluded.fotos,
                 actualizado_en=excluded.actualizado_en,
-                proveedor=excluded.proveedor, proveedor_id=excluded.proveedor_id
+                proveedor=excluded.proveedor, proveedor_id=excluded.proveedor_id,
+                stock_info=excluded.stock_info
         """, (pid, p.get("nombre") or "", p.get("descripcion") or "",
               p.get("sku") or "", str(p.get("precio") or ""),
               1 if p.get("activo") else 0,
               json.dumps(p.get("categorias") or [], ensure_ascii=False),
               json.dumps(fotos, ensure_ascii=False),
               previo["guardado_en"] if previo else ahora, ahora,
-              p.get("proveedor") or "", p.get("proveedor_id")))
+              p.get("proveedor") or "", p.get("proveedor_id"),
+              json.dumps(p.get("stock_info") or {}, ensure_ascii=False)))
 
 
 def listar_productos():
@@ -343,6 +447,12 @@ def listar_productos():
                 {"id": m["id"], "nombre": m["nombre"],
                  "contenido": m["contenido"] or ""})
     out = []
+    provs_por_producto = {}
+    for pv in con.execute("SELECT * FROM productos_proveedores ORDER BY id").fetchall():
+        provs_por_producto.setdefault(pv["producto_id"], []).append(
+            {"id": pv["id"], "producto_id_prov": pv["producto_id_prov"],
+             "nombre": pv["nombre"] or "",
+             "stock_info": json.loads(pv["stock_info"] or "{}")})
     for f in filas:
         out.append({
             "id": f["id"], "nombre": f["nombre"],
@@ -355,6 +465,8 @@ def listar_productos():
             "proveedor": f["proveedor"] or "",
             "proveedor_id": f["proveedor_id"],
             "modulos": modulos_por_producto.get(f["id"], []),
+            "stock_info": json.loads(f["stock_info"] or "{}"),
+            "proveedores_alt": provs_por_producto.get(f["id"], []),
         })
     return out
 
@@ -364,6 +476,8 @@ def eliminar_producto(pid: int):
         con.execute("DELETE FROM productos WHERE id=?", (pid,))
         con.execute("DELETE FROM descripciones WHERE producto_id=?", (pid,))
         con.execute("DELETE FROM modulos WHERE producto_id=?", (pid,))
+        con.execute("DELETE FROM productos_proveedores WHERE producto_id=?",
+                    (pid,))
     dir_prod = CARPETA_IMAGENES / str(pid)
     if dir_prod.exists():
         shutil.rmtree(dir_prod, ignore_errors=True)
@@ -786,6 +900,17 @@ class Handler(BaseHTTPRequestHandler):
             fotos.sort(key=lambda f: not f["main"])  # la principal primero
             categorias = [c.get("name") for c in (o.get("categories") or [])
                           if c.get("name")]
+            bodegas = []
+            for b in (o.get("warehouse_product") or []):
+                info_b = b.get("warehouse") or {}
+                bodegas.append({
+                    "bodega": info_b.get("name") or "",
+                    "ciudad": ((info_b.get("city") or {}).get("name") or ""),
+                    "stock": b.get("stock"),
+                })
+            stock_info = _stock_dropi(o, ses["user_id"])
+            stock_info["bodegas"] = bodegas
+            stock_info["consultado_en"] = datetime.now().strftime("%Y-%m-%d %H:%M")
             # proveedor: v2 trae user_id y de ahí sacamos la tienda
             proveedor, proveedor_id = "", None
             try:
@@ -821,6 +946,8 @@ class Handler(BaseHTTPRequestHandler):
                 "proveedor": proveedor,
                 "proveedor_id": proveedor_id,
                 "modulos": listar_modulos(int(pid)),
+                "stock_info": stock_info,
+                "proveedores_alt": listar_proveedores_alt(int(pid)),
             })
             return
 
@@ -1083,6 +1210,123 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, {"ok": True})
             return
 
+        if ruta == "/api/producto/stock":
+            d = self._leer_json()
+            try:
+                pid_s = int(str(d.get("id", "")))
+            except ValueError:
+                self._json(400, {"ok": False, "error": "ID inválido."})
+                return
+            ses = dropi.cargar_sesion()
+            if not ses:
+                self._json(200, {"ok": False, "sesion_expirada": True})
+                return
+            st, resp = dropi.http(
+                "GET", f"{dropi.API}/products/productlist/v1/show/",
+                params=[("id", pid_s)], token=ses["token"],
+                host=ses.get("pais"))
+            if st != 200 or not isinstance(resp, dict):
+                self._json(200, {"ok": False,
+                                 "error": f"Dropi respondió HTTP {st}."})
+                return
+            o = resp.get("objects") or resp
+            if isinstance(o, list):
+                o = o[0] if o else {}
+            bodegas = []
+            for b in (o.get("warehouse_product") or []):
+                info_b = b.get("warehouse") or {}
+                bodegas.append({"bodega": info_b.get("name") or "",
+                                "ciudad": ((info_b.get("city") or {}).get("name") or ""),
+                                "stock": b.get("stock")})
+            stock_info = _stock_dropi(o, ses["user_id"])
+            stock_info["bodegas"] = bodegas
+            stock_info["consultado_en"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+            with db() as con:
+                con.execute("UPDATE productos SET stock_info=? WHERE id=?",
+                            (json.dumps(stock_info, ensure_ascii=False), pid_s))
+            self._json(200, {"ok": True, "stock_info": stock_info})
+            return
+
+        if ruta == "/api/proveedor/agregar":
+            d = self._leer_json()
+            try:
+                pid = int(str(d.get("producto_id", "")))
+                id_prov = int(str(d.get("id_prov", "")))
+            except ValueError:
+                self._json(400, {"ok": False, "error": "IDs inválidos."})
+                return
+            ses = dropi.cargar_sesion()
+            if not ses:
+                self._json(200, {"ok": False, "sesion_expirada": True})
+                return
+            try:
+                with db() as con:
+                    dup = con.execute(
+                        "SELECT 1 FROM productos_proveedores WHERE producto_id=? "
+                        "AND producto_id_prov=?", (pid, id_prov)).fetchone()
+                if dup:
+                    raise RuntimeError("Ese ID de proveedor ya está agregado.")
+                with db() as con:
+                    existe = con.execute("SELECT 1 FROM productos WHERE id=?",
+                                         (pid,)).fetchone()
+                if not existe:
+                    raise RuntimeError("Guarda primero el producto principal.")
+                nombre, stock = _info_proveedor_stock(ses, id_prov)
+                with db() as con:
+                    con.execute(
+                        "INSERT INTO productos_proveedores (producto_id, "
+                        "producto_id_prov, nombre, stock_info, agregado_en) "
+                        "VALUES (?,?,?,?,?)",
+                        (pid, id_prov, nombre,
+                         json.dumps(stock, ensure_ascii=False),
+                         datetime.now().strftime("%Y-%m-%d %H:%M")))
+                self._json(200, {"ok": True})
+            except RuntimeError as e:
+                self._json(200, {"ok": False, "error": str(e)[:300]})
+            except Exception as e:
+                self._json(200, {"ok": False, "error": str(e)[:300]})
+            return
+
+        if ruta == "/api/proveedor/eliminar":
+            d = self._leer_json()
+            try:
+                eliminar_proveedor_alt(int(str(d.get("id", ""))))
+                self._json(200, {"ok": True})
+            except ValueError:
+                self._json(400, {"ok": False, "error": "ID inválido."})
+            return
+
+        if ruta == "/api/proveedor/stock":
+            d = self._leer_json()
+            try:
+                fid = int(str(d.get("id", "")))
+            except ValueError:
+                self._json(400, {"ok": False, "error": "ID inválido."})
+                return
+            ses = dropi.cargar_sesion()
+            if not ses:
+                self._json(200, {"ok": False, "sesion_expirada": True})
+                return
+            with db() as con:
+                fila = con.execute(
+                    "SELECT * FROM productos_proveedores WHERE id=?",
+                    (fid,)).fetchone()
+            if not fila:
+                self._json(200, {"ok": False, "error": "Proveedor no encontrado."})
+                return
+            try:
+                nombre, stock = _info_proveedor_stock(ses, fila["producto_id_prov"])
+                with db() as con:
+                    con.execute("UPDATE productos_proveedores SET nombre=?, "
+                                "stock_info=? WHERE id=?",
+                                (nombre, json.dumps(stock, ensure_ascii=False),
+                                 fid))
+                self._json(200, {"ok": True, "stock_info": stock,
+                                 "nombre": nombre})
+            except Exception as e:
+                self._json(200, {"ok": False, "error": str(e)[:300]})
+            return
+
         if ruta == "/api/modulo/guardar":
             d = self._leer_json()
             nombre = (d.get("nombre") or "").strip()
@@ -1098,6 +1342,20 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(400, {"ok": False, "error": "producto_id inválido."})
             except RuntimeError as e:
                 self._json(200, {"ok": False, "error": str(e)})
+            return
+
+        if ruta == "/api/modulo/orden":
+            d = self._leer_json()
+            ids = d.get("ids")
+            if not isinstance(ids, list) or not all(
+                    str(i).isdigit() for i in ids):
+                self._json(400, {"ok": False, "error": "Lista de IDs inválida."})
+                return
+            try:
+                reordenar_modulos(ids)
+                self._json(200, {"ok": True})
+            except Exception as e:
+                self._json(200, {"ok": False, "error": str(e)[:200]})
             return
 
         if ruta == "/api/modulo/eliminar":

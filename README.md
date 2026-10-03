@@ -17,6 +17,11 @@ abrir el navegador ni filtrar a mano. La página tiene dos pestañas:
     *Ver ficha* (usa tus imágenes locales) y *Eliminar*.
   - **✏️ Editar descripción**: complementa la descripción del proveedor;
     la IA usa siempre la versión editada.
+  - **📦 Stock del proveedor**: total y desglose por bodega, con botón
+    *Actualizar stock* que consulta Dropi en vivo cuando lo necesites.
+  - **📂 Módulos**: secciones desplegables por producto (Descripción fija +
+    las que crees: Secuencia, Objeciones…), editables, con copiar/eliminar.
+    Su contenido alimenta a la IA como contexto.
 - **🤖 IA (Z.ai + OpenAI)**
   - Genera **descripciones** con GLM (Z.ai) usando plantillas de prompt.
   - Genera **imágenes** con la API de OpenAI (`gpt-image-1`): las plantillas

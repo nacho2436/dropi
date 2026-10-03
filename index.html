@@ -197,7 +197,12 @@
   .guardado-item {
     display: flex; align-items: center; gap: 12px;
     border: 1px solid var(--gris-borde); border-radius: 11px; padding: 10px;
-    background: #fff;
+    background: #fff; cursor: pointer;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  .guardado-item:hover {
+    border-color: var(--naranja);
+    box-shadow: 0 2px 10px rgba(244,123,32,.18);
   }
   .guardado-item img {
     width: 54px; height: 54px; object-fit: contain; border-radius: 8px;
@@ -298,6 +303,8 @@
     display: inline-block;
   }
   .modulo[open] summary::before { transform: rotate(90deg); }
+  .modulo.seccion summary { font-size: 15.5px; }
+  .modulo.seccion { margin-top: 12px; }
   .modulo summary .vacio {
     font-weight: 400; font-size: 12px; color: var(--texto-suave);
   }
@@ -313,6 +320,29 @@
     content: "(módulo vacío — edítalo para agregar contenido)";
     color: var(--texto-suave);
   }
+  .stock-caja {
+    display: flex; gap: 10px; align-items: center;
+    border: 1px solid var(--gris-borde); border-radius: 11px;
+    background: #f0f9ff; padding: 12px 14px;
+  }
+  .stock-texto { flex: 1; font-size: 14px; line-height: 1.7; }
+  .stock-texto .stock-total { font-size: 18px; font-weight: 800; color: #0369a1; }
+  .stock-texto .stock-linea { font-size: 13px; color: var(--texto-suave); }
+  .stock-texto .stock-bajo { color: #b45309; font-weight: 700; }
+  .prov-alt {
+    border: 1px solid var(--gris-borde); border-radius: 11px;
+    padding: 10px 12px; margin-bottom: 8px; background: #fff;
+  }
+  .prov-alt .prov-cabecera {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .prov-alt .prov-nombre { font-weight: 700; font-size: 14.5px; flex: 1; }
+  .prov-alt .prov-id {
+    font-size: 11.5px; background: #f1f5f9; color: var(--texto-suave);
+    border-radius: 999px; padding: 2px 8px;
+  }
+  .prov-alt .prov-stock { font-weight: 800; font-size: 16px; color: #0369a1; }
+  .prov-alt .prov-linea { font-size: 12.5px; color: var(--texto-suave); margin-top: 2px; }
   .crear-modulo { display: flex; gap: 8px; margin-top: 10px; }
   .crear-modulo input { flex: 1; }
   .titulo-editor {
@@ -320,6 +350,59 @@
     margin-bottom: 6px;
   }
   footer { text-align: center; color: var(--texto-suave); font-size: 12px; margin-top: 8px; }
+  .boton-hamburguesa {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 13px 16px; font-size: 15px; font-weight: 700;
+    color: var(--texto); background: #fff;
+    border: 1px solid var(--gris-borde); border-radius: 12px;
+    cursor: pointer; margin-bottom: 14px;
+  }
+  .boton-hamburguesa:hover { border-color: var(--naranja); }
+  .hamburguesa-icono { font-size: 19px; color: var(--naranja); }
+  .boton-hamburguesa .contador { margin-left: auto; }
+  #fondoMenuGuardados {
+    position: fixed; inset: 0; background: rgba(15,23,42,.45);
+    z-index: 900;
+  }
+  #menuGuardados {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 350px;
+    max-width: 92vw; background: #fff; z-index: 901;
+    box-shadow: -8px 0 30px rgba(0,0,0,.18);
+    padding: 18px 16px; overflow-y: auto;
+    animation: deslizaMenu .18s ease-out;
+  }
+  @keyframes deslizaMenu { from { transform: translateX(100%); } to { transform: none; } }
+  .menu-cabecera {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .menu-cabecera h2 { font-size: 16px; }
+  #buscarGuardado {
+    width: 100%; padding: 9px 12px; font-size: 14px;
+    border: 1px solid var(--gris-borde); border-radius: 9px;
+    margin-bottom: 12px;
+  }
+  #menuGuardados .guardado-item { flex-direction: column; align-items: stretch; }
+  #menuGuardados .guardado-item img { width: 100%; height: 110px; }
+  #modalFondo {
+    position: fixed; inset: 0; background: rgba(15,23,42,.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 20px;
+  }
+  .modal-caja {
+    background: #fff; border-radius: 14px; padding: 22px;
+    max-width: 400px; width: 100%; text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  }
+  .modal-icono { font-size: 34px; }
+  .modal-texto { font-size: 14.5px; line-height: 1.6; margin: 10px 0 16px; color: var(--texto); }
+  .modal-botones { display: flex; gap: 8px; justify-content: center; }
+  .modal-aceptar {
+    padding: 10px 22px; font-size: 14.5px; font-weight: 700; color: #fff;
+    background: var(--rojo); border: none; border-radius: 9px; cursor: pointer;
+  }
+  .modal-aceptar.neutro { background: #2563eb; }
+  .modal-aceptar:hover { filter: brightness(.92); }
 </style>
 </head>
 <body>
@@ -423,6 +506,12 @@
 
   <!-- ================= PESTAÑA PRODUCTOS ================= -->
   <div id="tabProductos" class="oculto">
+    <button id="btnMenuGuardados" class="boton-hamburguesa">
+      <span class="hamburguesa-icono">☰</span>
+      <span>Productos guardados</span>
+      <span id="contadorGuardados" class="contador">(0)</span>
+    </button>
+
     <div class="tarjeta">
       <h2>🔎 Buscar producto por ID</h2>
       <label for="productoId">ID del producto</label>
@@ -450,14 +539,42 @@
         <span class="nota" style="display:inline">…o presiona ✕ sobre una miniatura para eliminarla</span>
       </div>
       <button id="btnGuardarProducto" class="guardar">💾 Guardar producto en mi base de datos</button>
-      <h2 style="margin-top:16px">📂 Módulos del producto</h2>
-      <p class="nota" style="margin-top:0">Despliega cada módulo con un clic.
-        Los módulos también se usan como contexto cuando la IA genera.</p>
-      <div id="prodModulos"></div>
-      <div id="zonaCrearModulo" class="crear-modulo oculto">
-        <input type="text" id="nombreModuloNuevo" placeholder="Nombre del módulo (ej: Secuencia, Objeciones…)">
-        <button id="btnCrearModulo" class="chico">➕ Crear módulo</button>
-      </div>
+      <details id="seccionStock" class="modulo seccion">
+        <summary><span id="stockResumen">📦 Stock del proveedor</span></summary>
+        <div class="modulo-cuerpo">
+          <div class="stock-caja">
+            <div id="stockTexto" class="stock-texto">Sin datos de stock.</div>
+            <button id="btnActualizarStock" class="chico">🔄 Actualizar stock</button>
+          </div>
+        </div>
+      </details>
+
+      <details id="seccionProv" class="modulo seccion">
+        <summary><span id="provResumen">🔁 Otros proveedores de este producto</span></summary>
+        <div class="modulo-cuerpo">
+          <p class="nota" style="margin-top:0">Agrega el ID con que otro proveedor
+            vende este mismo producto y compara su stock.</p>
+          <div id="listaProvAlt"></div>
+          <div class="crear-modulo">
+            <input type="tel" id="idProvNuevo" inputmode="numeric"
+                   placeholder="ID del producto en el otro proveedor">
+            <button id="btnAgregarProv" class="chico">➕ Agregar proveedor</button>
+          </div>
+        </div>
+      </details>
+
+      <details id="seccionModulos" class="modulo seccion">
+        <summary><span id="modulosResumen">📂 Módulos del producto</span></summary>
+        <div class="modulo-cuerpo">
+          <p class="nota" style="margin-top:0">Despliega cada módulo con un clic.
+            Los módulos también se usan como contexto cuando la IA genera.</p>
+          <div id="prodModulos"></div>
+          <div id="zonaCrearModulo" class="crear-modulo oculto">
+            <input type="text" id="nombreModuloNuevo" placeholder="Nombre del módulo (ej: Secuencia, Objeciones…)">
+            <button id="btnCrearModulo" class="chico">➕ Crear módulo</button>
+          </div>
+        </div>
+      </details>
       <div id="zonaEditarDesc" class="oculto">
         <div class="titulo-editor" id="tituloEditor">Editando: Descripción</div>
         <div class="barra-editor">
@@ -481,14 +598,21 @@
         pestaña 🤖 IA y presión «Guardar en el producto».</p>
     </div>
 
-    <div id="tarjetaGuardados" class="tarjeta">
-      <h2>📚 Productos guardados <span id="contadorGuardados" class="contador"></span></h2>
-      <div id="listaGuardados" class="lista-guardados"></div>
-      <p class="nota" id="notaGuardados" style="display:none">
-        Aún no has guardado productos. Busca uno por ID y presiona
-        «Guardar producto».</p>
-    </div>
   </div><!-- /tabProductos -->
+
+  <!-- ============ MENÚ HAMBURGUESA: PRODUCTOS GUARDADOS ============ -->
+  <div id="fondoMenuGuardados" class="oculto"></div>
+  <aside id="menuGuardados" class="oculto" aria-label="Productos guardados">
+    <div class="menu-cabecera">
+      <h2>📚 Productos guardados</h2>
+      <button id="btnCerrarMenuGuardados" class="chico" title="Cerrar">✕</button>
+    </div>
+    <input type="text" id="buscarGuardado" placeholder="🔎 Buscar por nombre o ID…">
+    <div id="listaGuardados" class="lista-guardados"></div>
+    <p class="nota" id="notaGuardados" style="display:none">
+      Aún no has guardado productos. Busca uno por ID y presiona
+      «Guardar producto».</p>
+  </aside>
 
   <!-- ================= PESTAÑA IA (Z.ai) ================= -->
   <div id="tabIA" class="oculto">
@@ -603,6 +727,19 @@
         adicional cuando vuelvas a generar con la IA.</p>
     </div>
   </div><!-- /tabIA -->
+
+
+<!-- ============ MODAL (confirmaciones propias) ============ -->
+<div id="modalFondo" class="oculto">
+  <div class="modal-caja" role="dialog" aria-modal="true">
+    <div id="modalIcono" class="modal-icono">⚠️</div>
+    <div id="modalTexto" class="modal-texto"></div>
+    <div class="modal-botones">
+      <button id="modalCancelar" class="secundario">Cancelar</button>
+      <button id="modalAceptar" class="modal-aceptar">Confirmar</button>
+    </div>
+  </div>
+</div>
 
   <footer>Usa los endpoints oficiales de Dropi · solo funciona en este equipo</footer>
 </div>
@@ -910,7 +1047,7 @@ function pintarProducto(p, mantenerAbierto = null) {
         x.textContent = "✕";
         x.onclick = async e => {
           e.stopPropagation();
-          if (!confirm("¿Eliminar esta imagen del producto?")) return;
+          if (!(await preguntar("¿Eliminar esta imagen del producto?"))) return;
           const rr = await fetch("/api/imagen/eliminar", {
             method: "POST", headers: {"Content-Type": "application/json"},
             body: JSON.stringify({producto_id: Number(p.id), ruta: f.url})
@@ -923,7 +1060,7 @@ function pintarProducto(p, mantenerAbierto = null) {
             await cargarIAProductos();
             pintarProducto(p);
           } else {
-            alert("No se pudo eliminar: " + (dd.error || "error"));
+            aviso("No se pudo eliminar: " + (dd.error || "error"));
           }
         };
         wrap.appendChild(x);
@@ -934,8 +1071,11 @@ function pintarProducto(p, mantenerAbierto = null) {
   // gestión de imágenes solo para productos guardados
   $("zonaGestionImagenes").classList.toggle(
     "oculto", !idsGuardados.has(Number(p.id)));
+  pintarStock(p);
+  pintarProvAlt(p);
   pintarModulos(p);
   if (mantenerAbierto) {
+    $("seccionModulos").open = true;
     const dets = document.querySelectorAll("#prodModulos details.modulo");
     dets.forEach(d => { d.open = true; });  // tras editar, mostrar el cambio
   }
@@ -976,12 +1116,192 @@ $("archivoImagen").addEventListener("change", async () => {
       await cargarIAProductos();
       pintarProducto(productoActual);
     } else {
-      alert("No se pudo agregar: " + (d.error || "error"));
+      aviso("No se pudo agregar: " + (d.error || "error"));
     }
   } catch {
-    alert("Error de conexión al subir la imagen.");
+    aviso("Error de conexión al subir la imagen.");
   }
 });
+
+function pintarStock(p) {
+  const s = p.stock_info || {};
+  const caja = $("stockTexto");
+  $("stockResumen").textContent = "📦 Stock del proveedor" +
+    (s.total != null ? ` · ${s.total} disponibles` : "");
+  if (s.total == null && !(s.bodegas || []).length) {
+    caja.innerHTML = "Sin datos de stock." +
+      (idsGuardados.has(Number(p.id)) || true ? " Presiona «Actualizar stock»." : "");
+    return;
+  }
+  let html = "";
+  if (s.total != null) {
+    const bajo = Number(s.total) > 0 && Number(s.total) <= 10;
+    html += `<span class="stock-total ${bajo ? "stock-bajo" : ""}">📦 ${s.total} disponibles</span>`;
+  }
+  if (s.total_bodegas != null && Number(s.total_bodegas) !== Number(s.total)) {
+    html += `<div class="stock-linea">Total en bodegas: ${s.total_bodegas} und.</div>`;
+  }
+  if (Number(s.reservado_otros) > 0) {
+    html += `<div class="stock-linea">− Reservado a otros vendedores: ${s.reservado_otros} und.</div>`;
+  }
+  if (Number(s.privado_tuyo) > 0) {
+    html += `<div class="stock-linea">− Tu stock privado: ${s.privado_tuyo} und.</div>`;
+  }
+  (s.bodegas || []).forEach(b => {
+    html += `<div class="stock-linea">• ${b.bodega}${b.ciudad ? " · " + b.ciudad : ""}: <b>${b.stock}</b> und.</div>`;
+  });
+  if (s.consultado_en) {
+    html += `<div class="stock-linea">Consultado: ${s.consultado_en}</div>`;
+  }
+  caja.innerHTML = html;
+}
+
+function pintarProvAlt(p) {
+  const cont = $("listaProvAlt");
+  cont.innerHTML = "";
+  const n = (p.proveedores_alt || []).length;
+  $("provResumen").textContent = "🔁 Otros proveedores de este producto" +
+    (n ? ` · ${n}` : "");
+  (p.proveedores_alt || []).forEach(pr => {
+    const div = document.createElement("div");
+    div.className = "prov-alt";
+    const s = pr.stock_info || {};
+    const cabe = document.createElement("div");
+    cabe.className = "prov-cabecera";
+    const nom = document.createElement("span");
+    nom.className = "prov-nombre";
+    nom.textContent = pr.nombre || "Proveedor sin nombre";
+    const idChip = document.createElement("span");
+    idChip.className = "prov-id";
+    idChip.textContent = "ID " + pr.producto_id_prov;
+    const stk = document.createElement("span");
+    stk.className = "prov-stock";
+    stk.textContent = s.total != null ? `📦 ${s.total} disp.` : "sin dato";
+    cabe.appendChild(nom);
+    cabe.appendChild(idChip);
+    cabe.appendChild(stk);
+
+    const linea = document.createElement("div");
+    linea.className = "prov-linea";
+    let txt = "";
+    (s.bodegas || []).forEach(b => {
+      txt += `• ${b.bodega}${b.ciudad ? " · " + b.ciudad : ""}: ${b.stock} und.  `;
+    });
+    if (Number(s.reservado_otros) > 0) txt += `· −${s.reservado_otros} reservados a otros`;
+    if (s.consultado_en) txt += `· consultado ${s.consultado_en}`;
+    linea.textContent = txt || "Presiona 🔄 para consultar el stock.";
+
+    const acciones = document.createElement("div");
+    acciones.style.cssText = "display:flex;gap:6px;margin-top:6px";
+    const btnRef = document.createElement("button");
+    btnRef.className = "chico";
+    btnRef.textContent = "🔄 Stock";
+    btnRef.onclick = async () => {
+      btnRef.disabled = true; btnRef.textContent = "…";
+      try {
+        const r = await fetch("/api/proveedor/stock", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({id: pr.id})
+        });
+        const d = await r.json();
+        if (d.ok) {
+          pr.stock_info = d.stock_info;
+          pr.nombre = d.nombre || pr.nombre;
+          pintarProvAlt(productoActual);
+        } else if (d.sesion_expirada) {
+          aviso("Tu sesión de Dropi caducó; ingresa de nuevo e inténtalo.");
+        } else { aviso("No se pudo consultar: " + (d.error || "error")); }
+      } catch { aviso("Error de conexión."); }
+    };
+    const btnDel = document.createElement("button");
+    btnDel.className = "chico peligro";
+    btnDel.textContent = "🗑️";
+    btnDel.onclick = async () => {
+      if (!(await preguntar(`¿Eliminar el proveedor «${pr.nombre || pr.producto_id_prov}»?`))) return;
+      await fetch("/api/proveedor/eliminar", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({id: pr.id})
+      });
+      await cargarGuardados();
+      await cargarIAProductos();
+      productoActual.proveedores_alt = (productoActual.proveedores_alt || [])
+        .filter(x => x.id !== pr.id);
+      pintarProvAlt(productoActual);
+    };
+    acciones.appendChild(btnRef);
+    acciones.appendChild(btnDel);
+    div.appendChild(cabe);
+    div.appendChild(linea);
+    div.appendChild(acciones);
+    cont.appendChild(div);
+  });
+}
+
+$("btnAgregarProv").onclick = async () => {
+  if (!productoActual) return void aviso("Primero busca un producto.");
+  const idProv = $("idProvNuevo").value.replace(/\D/g, "");
+  if (!idProv) return void aviso("Escribe el ID numérico del producto del otro proveedor.");
+  const btn = $("btnAgregarProv");
+  btn.disabled = true; btn.textContent = "Consultando…";
+  try {
+    const r = await fetch("/api/proveedor/agregar", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({producto_id: Number(productoActual.id),
+                            id_prov: parseInt(idProv, 10)})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      $("idProvNuevo").value = "";
+      const rr = await fetch("/api/productos");
+      const dd = await rr.json();
+      productoActual.proveedores_alt =
+        (dd.productos.find(x => Number(x.id) === Number(productoActual.id)) || {})
+        .proveedores_alt || [];
+      await cargarGuardados();
+      pintarProvAlt(productoActual);
+    } else if (d.sesion_expirada) {
+      await cargarEstado();
+      aviso("Tu sesión de Dropi caducó; ingresa usuario y contraseña y reintenta.");
+    } else {
+      aviso("No se pudo agregar: " + (d.error || "error"));
+    }
+  } catch { aviso("Error de conexión al agregar el proveedor."); }
+  finally { btn.disabled = false; btn.textContent = "➕ Agregar proveedor"; }
+};
+$("idProvNuevo").addEventListener("keydown", e => {
+  if (e.key === "Enter") $("btnAgregarProv").click();
+});
+
+$("btnActualizarStock").onclick = async () => {
+  if (!productoActual) return void aviso("Primero busca un producto.");
+  const btn = $("btnActualizarStock");
+  btn.disabled = true;
+  btn.textContent = "Consultando…";
+  try {
+    const r = await fetch("/api/producto/stock", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({id: Number(productoActual.id)})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      productoActual.stock_info = d.stock_info;
+      pintarStock(productoActual);
+      btn.textContent = "✔ Actualizado";
+      setTimeout(() => btn.textContent = "🔄 Actualizar stock", 1500);
+    } else if (d.sesion_expirada) {
+      await cargarEstado();
+      aviso("Tu sesión de Dropi caducó. Ingresa usuario y contraseña arriba y vuelve a intentar.");
+      $("tarjetaLogin").scrollIntoView({behavior: "smooth"});
+    } else {
+      aviso("No se pudo consultar: " + (d.error || "error"));
+    }
+  } catch {
+    aviso("Error de conexión al consultar el stock.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "🔄 Actualizar stock";
+  }
+};
 
 function htmlATexto(html) {
   const div = document.createElement("div");
@@ -1022,11 +1342,12 @@ function cancelarEdicionDesc() {
 function abrirEditorModulo(info, contenido) {
   if (info.tipo !== "descripcion" &&
       !idsGuardados.has(Number(productoActual.id))) {
-    return alert("Primero guarda el producto para poder editar sus módulos.");
+    return void aviso("Primero guarda el producto para poder editar sus módulos.");
   }
   moduloEditando = info;
   $("tituloEditor").textContent = "Editando: " + info.nombre;
   $("editarDesc").innerHTML = limpiarHTML(contenido || "");
+  $("seccionModulos").open = true;
   $("zonaEditarDesc").classList.remove("oculto");
   $("zonaEditarDesc").scrollIntoView({behavior: "smooth", block: "center"});
   $("editarDesc").focus();
@@ -1035,6 +1356,8 @@ function abrirEditorModulo(info, contenido) {
 function pintarModulos(p) {
   const cont = $("prodModulos");
   cont.innerHTML = "";
+  const n = 1 + (p.modulos || []).length;  // descripción + propios
+  $("modulosResumen").textContent = "📂 Módulos del producto · " + n;
   // módulo fijo: Descripción
   cont.appendChild(crearModulo(
     {tipo: "descripcion", nombre: "📝 Descripción",
@@ -1073,6 +1396,19 @@ function crearModulo(info, p) {
     copiarTexto(htmlATexto(info.contenido), btnCopiar);
   };
   acciones.appendChild(btnCopiar);
+  // reordenar: subir / bajar
+  const btnSubir = document.createElement("button");
+  btnSubir.className = "chico";
+  btnSubir.textContent = "⬆";
+  btnSubir.title = "Subir el módulo";
+  btnSubir.onclick = e => { e.preventDefault(); moverModulo(info.id, -1); };
+  acciones.appendChild(btnSubir);
+  const btnBajar = document.createElement("button");
+  btnBajar.className = "chico";
+  btnBajar.textContent = "⬇";
+  btnBajar.title = "Bajar el módulo";
+  btnBajar.onclick = e => { e.preventDefault(); moverModulo(info.id, 1); };
+  acciones.appendChild(btnBajar);
   const btnEdit = document.createElement("button");
   btnEdit.className = "chico";
   btnEdit.textContent = "✏️ Editar";
@@ -1089,7 +1425,7 @@ function crearModulo(info, p) {
     btnDel.textContent = "🗑️ Eliminar módulo";
     btnDel.onclick = async e => {
       e.preventDefault();
-      if (!confirm(`¿Eliminar el módulo «${info.nombre.replace(/^[^\s]+\s/, "")}»?`)) return;
+      if (!(await preguntar(`¿Eliminar el módulo «${info.nombre.replace(/^[^\s]+\s/, "")}»?`))) return;
       await fetch("/api/modulo/eliminar", {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({id: info.id})
@@ -1110,9 +1446,33 @@ function crearModulo(info, p) {
   return det;
 }
 
+async function moverModulo(mid, delta) {
+  const mods = [...(productoActual.modulos || [])];
+  const i = mods.findIndex(m => m.id === mid);
+  const j = i + delta;
+  if (i === -1 || j < 0 || j >= mods.length) return;
+  [mods[i], mods[j]] = [mods[j], mods[i]];
+  try {
+    const r = await fetch("/api/modulo/orden", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ids: mods.map(m => m.id)})
+    });
+    const d = await r.json();
+    if (!d.ok) return aviso("No se pudo reordenar: " + (d.error || "error"));
+    productoActual.modulos = mods;
+    pintarProducto(productoActual);
+    $("seccionModulos").open = true;
+    const dets = document.querySelectorAll("#prodModulos details.modulo");
+    if (dets[j + 1]) {           // +1: la Descripción va primero
+      dets[j + 1].open = true;
+      dets[j + 1].scrollIntoView({behavior: "smooth", block: "center"});
+    }
+  } catch { aviso("Error de conexión al reordenar."); }
+}
+
 $("btnCrearModulo").onclick = async () => {
   const nombre = $("nombreModuloNuevo").value.trim();
-  if (!nombre) return alert("Escribe un nombre para el módulo.");
+  if (!nombre) return void aviso("Escribe un nombre para el módulo.");
   const r = await fetch("/api/modulo/guardar", {
     method: "POST", headers: {"Content-Type": "application/json"},
     body: JSON.stringify({producto_id: Number(productoActual.id), nombre,
@@ -1121,11 +1481,22 @@ $("btnCrearModulo").onclick = async () => {
   const d = await r.json();
   if (d.ok) {
     $("nombreModuloNuevo").value = "";
+    const rr = await fetch("/api/productos");
+    const dd = await rr.json();
+    const fresco = (dd.productos || [])
+      .find(x => Number(x.id) === Number(productoActual.id));
+    if (fresco) productoActual.modulos = fresco.modulos || [];
     await cargarGuardados();
     await cargarIAProductos();
     pintarProducto(productoActual);
+    $("seccionModulos").open = true;
+    const dets = document.querySelectorAll("#prodModulos details.modulo");
+    if (dets.length) {           // abrir y mostrar el módulo recién creado
+      dets[dets.length - 1].open = true;
+      dets[dets.length - 1].scrollIntoView({behavior: "smooth", block: "center"});
+    }
   } else {
-    alert("No se pudo crear: " + (d.error || "error"));
+    aviso("No se pudo crear: " + (d.error || "error"));
   }
 };
 $("nombreModuloNuevo").addEventListener("keydown", e => {
@@ -1190,10 +1561,10 @@ $("btnGuardarDesc").onclick = async () => {
       // repintar conservando el módulo abierto
       pintarProducto(productoActual, moduloEditando);
     } else {
-      alert("No se pudo guardar: " + (d.error || "error"));
+      aviso("No se pudo guardar: " + (d.error || "error"));
     }
   } catch {
-    alert("Error de conexión al guardar el módulo.");
+    aviso("Error de conexión al guardar el módulo.");
   } finally {
     btn.disabled = false;
   }
@@ -1245,7 +1616,7 @@ function crearItemDesc(des) {
   btnBorrar.style.marginTop = "0";
   btnBorrar.onclick = async e => {
     e.preventDefault();
-    if (!confirm("¿Eliminar esta descripción guardada?")) return;
+    if (!(await preguntar("¿Eliminar esta descripción guardada?"))) return;
     await fetch("/api/descripcion/eliminar", {
       method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({id: des.id})
@@ -1259,6 +1630,27 @@ function crearItemDesc(des) {
   div.appendChild(filaAcciones);
   return div;
 }
+
+/* ---------------- menú hamburguesa de guardados ---------------- */
+function abrirMenuGuardados() {
+  $("fondoMenuGuardados").classList.remove("oculto");
+  $("menuGuardados").classList.remove("oculto");
+  cargarGuardados();
+}
+function cerrarMenuGuardados() {
+  $("fondoMenuGuardados").classList.add("oculto");
+  $("menuGuardados").classList.add("oculto");
+}
+$("btnMenuGuardados").onclick = abrirMenuGuardados;
+$("btnCerrarMenuGuardados").onclick = cerrarMenuGuardados;
+$("fondoMenuGuardados").onclick = cerrarMenuGuardados;
+
+$("buscarGuardado").addEventListener("input", () => {
+  const q = $("buscarGuardado").value.trim().toLowerCase();
+  document.querySelectorAll("#listaGuardados .guardado-item").forEach(el => {
+    el.style.display = el.dataset.nombre.includes(q) ? "" : "none";
+  });
+});
 
 /* ---------------- guardar / listado en base de datos ---------------- */
 async function guardarProductoEnBD(p) {
@@ -1282,12 +1674,12 @@ async function guardarProductoEnBD(p) {
     } else {
       btn.textContent = "💾 Guardar producto en mi base de datos";
       btn.disabled = false;
-      alert("No se pudo guardar: " + (d.error || "error desconocido"));
+      aviso("No se pudo guardar: " + (d.error || "error desconocido"));
     }
   } catch {
     btn.textContent = "💾 Guardar producto en mi base de datos";
     btn.disabled = false;
-    alert("Error de conexión al guardar.");
+    aviso("Error de conexión al guardar.");
   }
 }
 
@@ -1305,6 +1697,7 @@ async function cargarGuardados() {
     items.forEach(p => {
       const div = document.createElement("div");
       div.className = "guardado-item";
+      div.dataset.nombre = (`#${p.id} ${p.nombre || ""} ${p.proveedor || ""}`).toLowerCase();
       const foto = (p.fotos || []).find(f => f.local) || (p.fotos || [])[0] || {};
       const src = foto.local || foto.url || "";
       div.innerHTML = `
@@ -1322,13 +1715,20 @@ async function cargarGuardados() {
         `${p.precio ? "$" + p.precio + " · " : ""}` +
         `${p.proveedor ? p.proveedor + " · " : ""}` +
         `guardado ${p.guardado_en} · ${(p.fotos || []).length} fotos`;
-      div.querySelector(".ver").onclick = () => {
+      const verGuardado = () => {
         $("productoId").value = p.id;
         pintarProducto(p);
+        cerrarMenuGuardados();
         $("productoResultado").scrollIntoView({behavior: "smooth"});
       };
-      div.querySelector(".peligro").onclick = async () => {
-        if (!confirm(`¿Eliminar el producto #${p.id} de la base de datos?`)) return;
+      div.querySelector(".ver").onclick = e => { e.stopPropagation(); verGuardado(); };
+      // la imagen y la zona de nombre/info también abren la ficha
+      const img = div.querySelector("img");
+      if (img) img.onclick = verGuardado;
+      div.querySelector(".guardado-info").onclick = verGuardado;
+      div.querySelector(".peligro").onclick = async e => {
+        e.stopPropagation();
+        if (!(await preguntar(`¿Eliminar el producto #${p.id} de la base de datos?`))) return;
         await fetch("/api/producto/eliminar", {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({id: p.id})
@@ -1381,7 +1781,7 @@ async function cargarIAConfig() {
       btnOff.textContent = "Desconectar";
       btnOff.title = "Borra la key de OpenAI; nada se podrá gastar";
       btnOff.onclick = async () => {
-        if (!confirm("¿Desconectar OpenAI? Las plantillas de imagen dejarán de funcionar hasta que pegues la key de nuevo.")) return;
+        if (!(await preguntar("¿Desconectar OpenAI? Las plantillas de imagen dejarán de funcionar hasta que pegues la key de nuevo."))) return;
         await fetch("/api/ia/desconectar", {
           method: "POST", headers: {"Content-Type": "application/json"},
           body: JSON.stringify({que: "openai"})
@@ -1459,7 +1859,7 @@ $("btnPlantillaNueva").onclick = () => {
 $("btnPlantillaGuardar").onclick = async () => {
   const nombre = $("iaNombrePlantilla").value.trim();
   const texto = $("iaPrompt").value.trim();
-  if (!nombre || !texto) return alert("Ponle nombre y texto a la plantilla.");
+  if (!nombre || !texto) return void aviso("Ponle nombre y texto a la plantilla.");
   try {
     const r = await fetch("/api/plantillas/guardar", {
       method: "POST", headers: {"Content-Type": "application/json"},
@@ -1473,15 +1873,15 @@ $("btnPlantillaGuardar").onclick = async () => {
       btn.textContent = "✔ Guardada";
       setTimeout(() => btn.textContent = "💾 Guardar plantilla", 1500);
     } else {
-      alert("No se pudo guardar: " + (d.error || "error"));
+      aviso("No se pudo guardar: " + (d.error || "error"));
     }
-  } catch { alert("Error de conexión al guardar la plantilla."); }
+  } catch { aviso("Error de conexión al guardar la plantilla."); }
 };
 
 $("btnPlantillaEliminar").onclick = async () => {
-  if (!plantillaSelId) return alert("No hay plantilla seleccionada.");
+  if (!plantillaSelId) return void aviso("No hay plantilla seleccionada.");
   const pl = plantillasIA.find(x => x.id === plantillaSelId);
-  if (!confirm(`¿Eliminar la plantilla «${pl ? pl.nombre : ""}»?`)) return;
+  if (!(await preguntar(`¿Eliminar la plantilla «${pl ? pl.nombre : ""}»?`))) return;
   try {
     await fetch("/api/plantillas/eliminar", {
       method: "POST", headers: {"Content-Type": "application/json"},
@@ -1491,7 +1891,7 @@ $("btnPlantillaEliminar").onclick = async () => {
     $("iaNombrePlantilla").value = "";
     $("iaPrompt").value = "";
     await cargarPlantillas();
-  } catch { alert("Error de conexión al eliminar."); }
+  } catch { aviso("Error de conexión al eliminar."); }
 };
 
 async function cargarIAProductos() {
@@ -1578,8 +1978,8 @@ async function cargarDescsIA() {
 $("btnGuardarTextoIA").onclick = async () => {
   const pid = Number($("iaProducto").value);
   const texto = $("iaTexto").textContent.trim();
-  if (!pid) return alert("Elige un producto guardado.");
-  if (!texto) return alert("No hay texto generado para guardar.");
+  if (!pid) return void aviso("Elige un producto guardado.");
+  if (!texto) return void aviso("No hay texto generado para guardar.");
   const btn = $("btnGuardarTextoIA");
   btn.disabled = true;
   try {
@@ -1593,10 +1993,10 @@ $("btnGuardarTextoIA").onclick = async () => {
       setTimeout(() => btn.textContent = "💾 Guardar en el producto", 1800);
       await cargarDescsIA();
     } else {
-      alert("No se pudo guardar: " + (d.error || "error"));
+      aviso("No se pudo guardar: " + (d.error || "error"));
     }
   } catch {
-    alert("Error de conexión al guardar la descripción.");
+    aviso("Error de conexión al guardar la descripción.");
   } finally {
     btn.disabled = false;
   }
@@ -1619,9 +2019,9 @@ $("btnGuardarIA").onclick = async () => {
       $("iaKeyOpenAI").value = "";
       location.reload();  // recarga limpia los chips de estado
     } else {
-      alert("No se pudo guardar: " + (d.error || "error"));
+      aviso("No se pudo guardar: " + (d.error || "error"));
     }
-  } catch { alert("Error de conexión al guardar la configuración."); }
+  } catch { aviso("Error de conexión al guardar la configuración."); }
 };
 
 $("btnGenerarIA").onclick = async () => {
@@ -1674,7 +2074,7 @@ $("btnGenerarIA").onclick = async () => {
           $("btnGuardarImagenIA").textContent = "✔ Agregada a la galería";
           await cargarIAProductos();
           cargarReferencia();
-        } else { alert("No se pudo agregar: " + (dd.error || "error")); }
+        } else { aviso("No se pudo agregar: " + (dd.error || "error")); }
       };
       $("iaChars").textContent = "";
       $("iaResultado").classList.remove("oculto");
@@ -1701,7 +2101,7 @@ $("btnGenerarIA").onclick = async () => {
           $("btnGuardarImagenIA").textContent = "✔ Agregada a la galería";
           await cargarIAProductos();
         } else {
-          alert("No se pudo agregar: " + (dd.error || "error"));
+          aviso("No se pudo agregar: " + (dd.error || "error"));
         }
       };
       $("iaChars").textContent = "";
@@ -1739,9 +2139,36 @@ $("btnCopiarIA").onclick = async () => {
     $("btnCopiarIA").textContent = "✔ Copiado";
     setTimeout(() => $("btnCopiarIA").textContent = "📋 Copiar texto", 1500);
   } catch {
-    alert("No pude copiar automáticamente; selecciona el texto manualmente.");
+    aviso("No pude copiar automáticamente; selecciona el texto manualmente.");
   }
 };
+
+/* ---------------- modal propio (los diálogos nativos no salen en este navegador) -- */
+let _modalResolver = null;
+function _abrirModal(texto, { conCancelar = true, textoOk = "Confirmar", neutro = false } = {}) {
+  $("modalTexto").textContent = texto;
+  $("modalCancelar").classList.toggle("oculto", !conCancelar);
+  const ok = $("modalAceptar");
+  ok.textContent = textoOk;
+  ok.classList.toggle("neutro", neutro);
+  $("modalIcono").textContent = neutro ? "ℹ️" : "⚠️";
+  $("modalFondo").classList.remove("oculto");
+  return new Promise(res => { _modalResolver = res; });
+}
+$("modalAceptar").onclick = () => {
+  $("modalFondo").classList.add("oculto");
+  if (_modalResolver) { _modalResolver(true); _modalResolver = null; }
+};
+$("modalCancelar").onclick = () => {
+  $("modalFondo").classList.add("oculto");
+  if (_modalResolver) { _modalResolver(false); _modalResolver = null; }
+};
+function preguntar(texto, textoOk = "Sí, eliminar") {
+  return _abrirModal(texto, { conCancelar: true, textoOk });
+}
+function aviso(texto) {
+  return _abrirModal(texto, { conCancelar: false, textoOk: "OK", neutro: true });
+}
 
 cargarEstado();
 </script>
